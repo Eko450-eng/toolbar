@@ -1,17 +1,55 @@
 /* Basic editor styles */
+
+.tiptap p::before {
+  content: none !important;
+}
+
+.ProseMirror p::before {
+  display: none !important;
+}
+.prose p::before {
+  content: none;
+  display: none;
+}
 .ProseMirror {
   // background-color: black;
   // color: white;
   // font-size: 1rem;
   // border-radius: .5rem;
-  // padding: .75rem;
+  overflow: auto;
+  padding: 0;
+  margin: 0;
   // height: 100%;
   width: 100%;
+  height: 100%;
 }
 
 .tiptap {
+  [data-checked] {
+    display: flex;
+    gap: .5rem;
+  }
+
+  input[type="checkbox"] {
+    outline: none;
+    border: none;
+    border-radius: 25px;
+    accent-color: teal;
+    cursor: pointer;
+  }
+
+  /* Optional: Add styles when checked */
+  input[type="checkbox"]:checked {
+    border: 2px solid green;
+    background-color: lightgreen;
+  }
+
   :first-child {
     margin-top: 0;
+  }
+  p {
+    margin: 0;
+    padding: 0;
   }
 
   /* List styles */
@@ -21,7 +59,6 @@
     margin: 1.25rem 1rem 1.25rem 0.4rem;
     
     li p {
-      margin-top: 0.25em;
       margin-bottom: 0.25em;
     }
   }

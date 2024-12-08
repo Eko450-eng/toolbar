@@ -4,6 +4,8 @@ use std::env::home_dir;
 use std::path::PathBuf;
 use std::thread;
 
+use serde::Deserialize;
+use serde::Serialize;
 use sqlx::{migrate::MigrateDatabase, sqlite::SqliteQueryResult, FromRow, Sqlite, SqlitePool};
 
 #[cfg(target_os = "windows")]
@@ -128,7 +130,9 @@ async fn create_schema(url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
         PRAGMA foreign_keys = ON ; 
         CREATE TABLE IF NOT EXISTS notes (
         id          INTEGER     PRIMARY KEY AUTOINCREMENT,
-        note        TEXT        NOT NULL,
+        title       TEXT        NOT NULL,
+        note        TEXT,
+        created_at   DATETIME    DEFAULT     CURRENT_TIMESTAMP,
         project     TEXT
         );";
     let result = sqlx::query(qry).execute(&pool).await;
@@ -160,48 +164,108 @@ async fn createdb() {
     }
 }
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, Serialize, Deserialize, FromRow)]
 struct Note {
-    id: i64,
+    id: Option<i64>,
+    created_at: Option<String>,
+    title: String,
     note: String,
     project: String,
 }
 
 #[tauri::command]
-async fn getnote(id: &str) -> Result<Vec<String>, Vec<String>> {
+async fn createnote() -> Result<i64, String> {
     let db_path = get_sqlite_url();
     let url = format!("sqlite://{}", db_path.to_string_lossy());
 
     let instance = SqlitePool::connect(&url).await.unwrap();
 
-    let notes: Vec<Note> = sqlx::query_as("SELECT * FROM notes WHERE id = ?")
-        .bind(&id.to_string())
+    let query = "
+        INSERT INTO notes (
+            note,
+            project,
+            title
+        ) 
+            VALUES($1, $2, $3)
+    ";
+
+    let instance = SqlitePool::connect(&url).await.unwrap();
+    let result = sqlx::query(&query)
+        .bind("".to_string())
+        .bind("".to_string())
+        .bind("New Note".to_string())
+        .execute(&instance)
+        .await
+        .map_err(|e| e.to_string())?
+        .last_insert_rowid();
+
+    Ok(result)
+}
+
+#[tauri::command]
+async fn getnote() -> Result<Vec<Note>, Vec<String>> {
+    let db_path = get_sqlite_url();
+    let url = format!("sqlite://{}", db_path.to_string_lossy());
+
+    let instance = SqlitePool::connect(&url).await.unwrap();
+
+    let notes: Vec<Note> = sqlx::query_as("SELECT * FROM notes")
         .fetch_all(&instance)
         .await
         .unwrap();
 
-    Ok(vec![
-        notes.first().unwrap().note.clone(),
-        notes.first().unwrap().project.clone(),
-    ])
+    //    println!("{:?}", notes.first().clone().unwrap());
+
+    Ok(notes)
 }
 
 #[tauri::command]
-async fn addnote(note: &str, project: &str) -> Result<String, String> {
+async fn deletenote(id: i64) -> Result<String, String> {
     let db_path = get_sqlite_url();
     let url = format!("sqlite://{}", db_path.to_string_lossy());
 
+    let query = "DELETE FROM notes WHERE id = $1;";
+
     let instance = SqlitePool::connect(&url).await.unwrap();
-    let query = "
+    let result = sqlx::query(&query).bind(&id).execute(&instance).await;
+
+    instance.close().await;
+
+    println!("Inserted -> {:?}", result);
+
+    // let s: String = result.try_into().expect("Could not return string");
+    Ok("Created".to_string())
+}
+
+#[tauri::command]
+async fn addnote(note: Note) -> Result<String, String> {
+    let db_path = get_sqlite_url();
+    let url = format!("sqlite://{}", db_path.to_string_lossy());
+
+    let mut query = "
         INSERT INTO notes (
             note,
-            project
+            project,
+            title
         ) 
-            VALUES($1, $2)
+            VALUES($1, $2, $3)
     ";
+
+    if note.id != Some(0) {
+        query = "
+        UPDATE notes SET
+            note = $1,
+            project = $2,
+            title = $3
+            WHERE id = $4;";
+    }
+
+    let instance = SqlitePool::connect(&url).await.unwrap();
     let result = sqlx::query(&query)
-        .bind(&note.to_string())
-        .bind(&project.to_string())
+        .bind(&note.note.to_string())
+        .bind(&note.project.to_string())
+        .bind(&note.title.to_string())
+        .bind(&note.id)
         .execute(&instance)
         .await;
 
@@ -218,7 +282,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            createdb, addnote, typetext, getnote
+            createdb, addnote, typetext, getnote, deletenote, createnote
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

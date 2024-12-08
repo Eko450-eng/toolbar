@@ -2,19 +2,15 @@
 import "./styles.scss";
 import { Editor } from "@tiptap/core";
 
-let {
-	editor = $bindable(),
-	element = $bindable(),
-	project = $bindable(),
-} = $props<{
+let { element = $bindable(), project = $bindable() } = $props<{
 	element: Element | undefined;
 	editor: Editor | null;
 	project: string;
 }>();
 </script>
 
-<div class="flex flex-col gap-4 prose text-white">
-    <div class="textarea" bind:this={element}></div>
+<div class="flex flex-col gap-4 prose text-white h-screen">
+    <div class="textarea h-3/5 overflow-auto" bind:this={element}></div>
 
     <label class="label">
         <span>Project</span>
