@@ -10,6 +10,7 @@ import { Icon } from "svelte-icons-pack";
 import { debounce } from "lodash-es";
 import {
 	FaSolidFloppyDisk,
+	FaSolidMoon,
 	FaSolidNoteSticky,
 	FaSolidPlus,
 	FaSolidRepeat,
@@ -22,6 +23,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { HeadProps } from "$lib/editorapp/header";
 import { FaSolidX } from "svelte-icons-pack/fa";
+import { toggleMode } from "mode-watcher";
 
 type Note = {
 	id?: number;
@@ -184,8 +186,8 @@ function loadnote(value: Note) {
                     <button type="button" class="btn-icon variant-filled" onclick={addNote}>
                         <Icon src={FaSolidFloppyDisk} />
                     </button>
-                    <button type="button" class="btn-icon variant-filled" onclick={setEditor}>
-                        <Icon src={FaSolidRepeat} />
+                    <button type="button" class="btn-icon variant-filled" onclick={toggleMode}>
+                        <Icon src={FaSolidMoon} />
                     </button>
                 </div>
             </div>
