@@ -21,6 +21,7 @@ import "../lib/editorapp/styles.css";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { HeadProps } from "$lib/editorapp/header";
+import { FaSolidX } from "svelte-icons-pack/fa";
 
 type Note = {
 	id?: number;
@@ -36,6 +37,9 @@ let note = $state<Note>({
 	project: "",
 	title: "",
 });
+
+let projects = $state<string[]>([]);
+let project = $state<string>();
 
 const CustomTaskList = TaskList.extend({
 	addKeyboardShortcuts() {
@@ -97,8 +101,15 @@ onMount(async () => {
 		setEditor();
 	}
 	await invoke("createdb", {});
-	notes = await invoke("getnote", {});
+	getnotes();
 });
+
+async function getnotes() {
+	await getprojects();
+	if (notes.length <= 0) notes = await invoke("getnote", { project });
+	notes = await invoke("getnote", { project });
+	console.log(project, notes);
+}
 
 async function createNote() {
 	try {
@@ -110,11 +121,20 @@ async function createNote() {
 	}
 }
 
+async function getprojects() {
+	try {
+		projects = await invoke("getprojects", { note });
+	} catch (error) {
+		console.error("Invoke error:", error);
+	}
+}
+
 async function addNote() {
 	try {
 		note.note = editor?.getHTML() ?? "";
 		await invoke("addnote", { note });
 		notes = await invoke("getnote", {});
+		getprojects();
 	} catch (error) {
 		console.error("Invoke error:", error);
 	}
@@ -182,18 +202,34 @@ function loadnote(value: Note) {
               placeholder=""
               bind:value={note.title}
             />
-        </label>
-            <div class="textarea h-4/5" bind:this={element}></div>
-            <label class="label">
-                <span>Project</span>
-                <input
-                  type="text"
-                  id="project"
-                  class="input px-2"
-                  placeholder=""
-                  bind:value={note.project}
-                />
             </label>
+            <div class="textarea h-4/5" bind:this={element}></div>
         </div>
+
+    <nav class="list-nav">
+        <ul>
+            <button class="btn w-full truncate self-end bg-red-500" onclick={() => { 
+                project = ""; 
+                getnotes(); 
+            }}>
+                <Icon src={FaSolidX}/>
+            </button>
+            {#each projects as p}
+                <li>
+                    <div class="w-full flex justify-between items-center" >
+                        <button class="btn truncate" onclick={() => {
+                            project = p;
+                            getnotes();
+                        }}>
+                            <span class="badge bg-primary-500 ">
+                                <Icon src={FaSolidNoteSticky}/>
+                            </span>
+                            <span class="flex-auto truncate">{p}</span>
+                        </button>
+                    </div>
+                </li>
+            {/each}
+        </ul>
+    </nav>
 </div>
 

@@ -5127,6 +5127,7 @@ name = "toolbar"
 version = "0.1.0"
 dependencies = [
  "dirs-next",
+ "regex",
  "serde",
  "serde_json",
  "sqlx",

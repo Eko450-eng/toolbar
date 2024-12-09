@@ -1,8 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use regex::Regex;
 use std::env;
-use std::env::home_dir;
 use std::path::PathBuf;
-use std::thread;
 
 use dirs_next;
 use serde::Deserialize;
@@ -29,13 +28,13 @@ fn get_sqlite_url() -> PathBuf {
     if let Some(app_data_dir) = dirs_next::data_dir() {
         println!("Application data directory: {}", app_data_dir.display());
         let mut path = app_data_dir;
-        path.push(".config/toolbar/notes.db");
+        path.push("toolbar/notes.db");
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     } else {
         println!("Could not determine the application data directory.");
-        let mut path = home_dir().expect("No home");
-        path.push(".config/toolbar/notes.db");
+        let mut path = PathBuf::from("/");
+        path.push("toolbar/notes.db");
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     }
@@ -69,7 +68,7 @@ async fn createnote() -> Result<i64, String> {
     let db_path = get_sqlite_url();
     let url = format!("sqlite://{}", db_path.to_string_lossy());
 
-    let instance = SqlitePool::connect(&url).await.unwrap();
+    let _instance = SqlitePool::connect(&url).await.unwrap();
 
     let query = "
         INSERT INTO notes (
@@ -94,7 +93,38 @@ async fn createnote() -> Result<i64, String> {
 }
 
 #[tauri::command]
-async fn getnote() -> Result<Vec<Note>, Vec<String>> {
+async fn getnote(project: Option<&str>) -> Result<Vec<Note>, Vec<String>> {
+    let db_path = get_sqlite_url();
+    let url = format!("sqlite://{}", db_path.to_string_lossy());
+
+    let instance = SqlitePool::connect(&url).await.unwrap();
+
+    let query = if let Some(project_string) = project {
+        if !project_string.is_empty() {
+            format!("SELECT * FROM notes WHERE note LIKE '%project: {project_string}<%'")
+        } else {
+            "SELECT * FROM notes".to_string()
+        }
+    } else {
+        "SELECT * FROM notes".to_string()
+    };
+
+    let notes: Vec<Note> = sqlx::query_as(&query).fetch_all(&instance).await.unwrap();
+
+    Ok(notes)
+}
+
+fn subtractheader(input: &str) -> Option<String> {
+    let re = Regex::new(
+        r#".prop..tag data-type="property" class="..............">project: (?<project>\w*)"#,
+    )
+    .unwrap();
+    re.captures(input)
+        .and_then(|cap| cap.name("project").map(|m| m.as_str().to_string()))
+}
+
+#[tauri::command]
+async fn getprojects() -> Result<Vec<String>, Vec<String>> {
     let db_path = get_sqlite_url();
     let url = format!("sqlite://{}", db_path.to_string_lossy());
 
@@ -105,9 +135,13 @@ async fn getnote() -> Result<Vec<Note>, Vec<String>> {
         .await
         .unwrap();
 
-    //    println!("{:?}", notes.first().clone().unwrap());
+    let mut projects: Vec<String> = vec![];
 
-    Ok(notes)
+    for note in notes {
+        projects.push(subtractheader(&note.note).expect("Couldn't get project"));
+    }
+
+    Ok(projects)
 }
 
 #[tauri::command]
@@ -124,7 +158,6 @@ async fn deletenote(id: i64) -> Result<String, String> {
 
     println!("Inserted -> {:?}", result);
 
-    // let s: String = result.try_into().expect("Could not return string");
     Ok("Created".to_string())
 }
 
@@ -173,7 +206,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            createdb, addnote, getnote, deletenote, createnote
+            createdb,
+            addnote,
+            getnote,
+            deletenote,
+            createnote,
+            getprojects
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
