@@ -17,7 +17,7 @@ import {
 } from "svelte-icons-pack/fa";
 import { all, createLowlight } from "lowlight";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import "../lib/editorapp/styles.scss";
+import "../lib/editorapp/styles.css";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { HeadProps } from "$lib/editorapp/header";
@@ -51,8 +51,6 @@ let editor: Editor | null = $state(null);
 
 function setEditor() {
 	const lowlight = createLowlight(all);
-	lowlight.register("css", css);
-	lowlight.register("json", json);
 
 	editor = null;
 	editor = new Editor({

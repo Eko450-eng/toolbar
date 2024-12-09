@@ -1,5 +1,4 @@
 <script lang="ts">
-import "./styles.scss";
 import { Editor } from "@tiptap/core";
 
 let { element = $bindable(), project = $bindable() } = $props<{
