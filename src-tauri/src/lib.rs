@@ -4,6 +4,7 @@ use std::env::home_dir;
 use std::path::PathBuf;
 use std::thread;
 
+use dirs_next;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::{migrate::MigrateDatabase, sqlite::SqliteQueryResult, FromRow, Sqlite, SqlitePool};
@@ -25,13 +26,19 @@ async fn create_schema(url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
 }
 
 fn get_sqlite_url() -> PathBuf {
-    let mut path = home_dir().expect("Could not find home directory");
-    path.push(".config/toolbar/notes.db");
-
-    // Ensure the directory exists
-    std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
-
-    path
+    if let Some(app_data_dir) = dirs_next::data_dir() {
+        println!("Application data directory: {}", app_data_dir.display());
+        let mut path = app_data_dir;
+        path.push(".config/toolbar/notes.db");
+        std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
+        path
+    } else {
+        println!("Could not determine the application data directory.");
+        let mut path = home_dir().expect("No home");
+        path.push(".config/toolbar/notes.db");
+        std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
+        path
+    }
 }
 
 #[tauri::command]
