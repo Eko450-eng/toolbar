@@ -45,8 +45,8 @@ pkgs.stdenv.mkDerivation {
   buildPhase = ''
     echo "Building Tauri app..."
     export PATH="$PATH:HOME/.cargo/bin" # Ensure rustup-installed cargo is available
-    npm install
-    npm run tauri build
+    pnpm install
+    pnpm run tauri build
   '';
 
   installPhase = ''

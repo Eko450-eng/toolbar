@@ -4,9 +4,9 @@
 	"version": "0.1.0",
 	"identifier": "de.wipdesign.toolbar",
 	"build": {
-		"beforeDevCommand": "npm dev",
+		"beforeDevCommand": "pnpm dev",
 		"devUrl": "http://localhost:1420",
-		"beforeBuildCommand": "npm build",
+		"beforeBuildCommand": "pnpm build",
 		"frontendDist": "../build"
 	},
 	"app": {
