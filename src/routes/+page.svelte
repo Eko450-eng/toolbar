@@ -13,11 +13,8 @@ import {
 	FaSolidMoon,
 	FaSolidNoteSticky,
 	FaSolidPlus,
-	FaSolidRepeat,
 	FaSolidTrash,
 } from "svelte-icons-pack/fa";
-import { all, createLowlight } from "lowlight";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import "../lib/editorapp/styles.css";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
@@ -100,17 +97,15 @@ onMount(async () => {
 });
 
 async function getnotes() {
-	await getprojects();
 	if (notes.length <= 0) notes = await invoke("getnote", { project });
 	notes = await invoke("getnote", { project });
-	console.log(project, notes);
+	await getprojects();
 }
 
 async function createNote() {
 	try {
-		const result = await invoke("createnote", { note });
+		await invoke("createnote", { note });
 		notes = await invoke("getnote", {});
-		console.log(result);
 	} catch (error) {
 		console.error("Invoke error:", error);
 	}
