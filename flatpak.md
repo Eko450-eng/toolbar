@@ -32,6 +32,6 @@ modules:
       #- install -Dm644 de.wipdesign.toolbar.metainfo.xml /app/share/metainfo/de.wipdesign.toolbar.rosary.metainfo.xml
 
 flatpak-builder --repo=./toolbar build-dir manifest.yaml
-flatpak --user remote-add --nogpg-verify toolbar ./toolbar/
+flatpak --user remote-add --no-gpg-verify toolbar ./toolbar/
 flatpak --user install toolbar de.wipdesign.toolbar
 flatpak run de.wipdesign.toolbar
