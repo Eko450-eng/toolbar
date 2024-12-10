@@ -17,7 +17,7 @@ async fn create_schema(url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
         title       TEXT        NOT NULL,
         note        TEXT,
         created_at   DATETIME    DEFAULT     CURRENT_TIMESTAMP,
-        project     TEXT
+        folder     TEXT
         );";
     let result = sqlx::query(qry).execute(&pool).await;
     pool.close().await;
@@ -60,7 +60,7 @@ struct Note {
     created_at: Option<String>,
     title: String,
     note: String,
-    project: String,
+    folder: String,
 }
 
 #[tauri::command]
@@ -73,17 +73,19 @@ async fn createnote() -> Result<i64, String> {
     let query = "
         INSERT INTO notes (
             note,
-            project,
+            folder,
             title
         ) 
             VALUES($1, $2, $3)
     ";
 
+    let now = chrono::Local::now().format("%Y-%m-%d_%H:%M:%S");
+
     let instance = SqlitePool::connect(&url).await.unwrap();
     let result = sqlx::query(&query)
         .bind("".to_string())
         .bind("".to_string())
-        .bind("New Note".to_string())
+        .bind(now.to_string())
         .execute(&instance)
         .await
         .map_err(|e| e.to_string())?
@@ -169,7 +171,7 @@ async fn addnote(note: Note) -> Result<String, String> {
     let mut query = "
         INSERT INTO notes (
             note,
-            project,
+            folder,
             title
         ) 
             VALUES($1, $2, $3)
@@ -179,7 +181,7 @@ async fn addnote(note: Note) -> Result<String, String> {
         query = "
         UPDATE notes SET
             note = $1,
-            project = $2,
+            folder = $2,
             title = $3
             WHERE id = $4;";
     }
@@ -187,7 +189,7 @@ async fn addnote(note: Note) -> Result<String, String> {
     let instance = SqlitePool::connect(&url).await.unwrap();
     let result = sqlx::query(&query)
         .bind(&note.note.to_string())
-        .bind(&note.project.to_string())
+        .bind(&note.folder.to_string())
         .bind(&note.title.to_string())
         .bind(&note.id)
         .execute(&instance)

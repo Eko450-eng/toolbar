@@ -129,3 +129,19 @@
     margin: 2rem 0;
   }
 }
+
+
+[timeStamp]::after {
+  content: ''; /* Default state, no content displayed */
+}
+
+[timeStamp]:hover::after {
+  content: attr(timeStamp); /* Use the attribute's value as the content */
+  width: fit-content;
+    heigth: fit-content;
+    font-size: .85rem;
+  color: #aaa; /* Customize as needed */
+  font-style: italic;
+  margin-left: 8px;
+}
+
