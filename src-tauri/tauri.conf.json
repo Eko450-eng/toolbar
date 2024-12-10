@@ -1,12 +1,12 @@
 {
 	"$schema": "https://schema.tauri.app/config/2",
 	"productName": "toolbar",
-	"version": "0.1.0",
+	"version": "0.0.1",
 	"identifier": "de.wipdesign.toolbar",
 	"build": {
-		"beforeDevCommand": "pnpm dev",
+		"beforeDevCommand": "yarn dev",
 		"devUrl": "http://localhost:1420",
-		"beforeBuildCommand": "pnpm build",
+		"beforeBuildCommand": "yarn build",
 		"frontendDist": "../build"
 	},
 	"app": {

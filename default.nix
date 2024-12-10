@@ -14,6 +14,7 @@ pkgs.stdenv.mkDerivation {
     nodejs
     glib.dev
     glib
+    pnpm
 
     libthai
   ];
@@ -22,6 +23,7 @@ pkgs.stdenv.mkDerivation {
     at-spi2-atk
     atkmm
     cairo
+    rustup
     cargo # Rust's Package Manager
     cargo-xwin
     fuse3
@@ -44,6 +46,8 @@ pkgs.stdenv.mkDerivation {
 
   buildPhase = ''
     echo "Building Tauri app..."
+    export RUST_BACKTRACE=1
+    export HOME=$(mktemp -d)
     export PATH="$PATH:HOME/.cargo/bin" # Ensure rustup-installed cargo is available
     pnpm install
     pnpm run tauri build
