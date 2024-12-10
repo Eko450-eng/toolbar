@@ -31,6 +31,7 @@ modules:
       - install -Dm644 ./usr/share/icons/hicolor/256x256@2/apps/toolbar.png /app/share/icons/hicolor/256x256@2/apps/de.wipdesign.toolbar.png
       #- install -Dm644 de.wipdesign.toolbar.metainfo.xml /app/share/metainfo/de.wipdesign.toolbar.rosary.metainfo.xml
 
+flatpak-builder --repo=./toolbar build-dir manifest.yaml
 flatpak --user remote-add --nogpg-verify toolbar ./toolbar/
 flatpak --user install toolbar de.wipdesign.toolbar
 flatpak run de.wipdesign.toolbar
