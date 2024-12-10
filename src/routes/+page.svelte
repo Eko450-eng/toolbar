@@ -50,10 +50,6 @@ let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
 
 function setEditor() {
-	const lowlight = createLowlight(all);
-	lowlight.register("css", css);
-	lowlight.register("json", json);
-
 	editor = null;
 	editor = new Editor({
 		element: element,
@@ -61,13 +57,8 @@ function setEditor() {
 			CustomTaskList,
 			TaskItem,
 			HeadProps,
-			CodeBlockLowlight.configure({
-				lowlight,
-			}),
 			Color.configure({ types: [TextStyle.name, ListItem.name] }),
-			StarterKit.configure({
-				codeBlock: false,
-			}),
+			StarterKit,
 		],
 		content: note.note,
 		onTransaction: () => {
