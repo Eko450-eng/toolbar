@@ -7,6 +7,15 @@ use serde::Deserialize;
 use serde::Serialize;
 use sqlx::{migrate::MigrateDatabase, sqlite::SqliteQueryResult, FromRow, Sqlite, SqlitePool};
 
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+struct Note {
+    id: Option<i64>,
+    created_at: Option<String>,
+    title: String,
+    note: String,
+    folder: String,
+}
+
 async fn create_schema(url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
     let pool = SqlitePool::connect(&url).await?;
     let qry = "
@@ -50,15 +59,6 @@ async fn createdb() {
             Err(e) => println!("{:?}", e),
         }
     }
-}
-
-#[derive(Debug, Serialize, Deserialize, FromRow)]
-struct Note {
-    id: Option<i64>,
-    created_at: Option<String>,
-    title: String,
-    note: String,
-    folder: String,
 }
 
 #[tauri::command]

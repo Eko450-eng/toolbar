@@ -131,17 +131,28 @@
 }
 
 
-[timeStamp]::after {
-  content: ''; /* Default state, no content displayed */
+[timeStamp]:not(:has(br)) {
+    position: relative;
 }
 
-[timeStamp]:hover::after {
-  content: attr(timeStamp); /* Use the attribute's value as the content */
-  width: fit-content;
+[timeStamp]:not(:has(br))::after {
+    content: ''; 
+    opacity: 0; 
+    transition: opacity 0.5s ease-in-out;
+}
+
+[timeStamp]:not(:has(br)):hover::after {
+    position: absolute;
+    opacity: 1;
+    top: 0;
+    right: 1rem;
+    font-weight: normal;
+    content: attr(timeStamp); 
+    text-align: right;
     heigth: fit-content;
     font-size: .85rem;
-  color: #aaa; /* Customize as needed */
-  font-style: italic;
-  margin-left: 8px;
+    color: #aaa;
+    font-style: italic;
+    margin-left: 8px;
 }
 

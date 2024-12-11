@@ -1,7 +1,7 @@
 <script lang="ts">
 import { invoke } from "@tauri-apps/api/core";
 import { onDestroy, onMount } from "svelte";
-import { Editor, Extension } from "@tiptap/core";
+import { Editor } from "@tiptap/core";
 import Color from "@tiptap/extension-color";
 import StarterKit from "@tiptap/starter-kit";
 import TextStyle from "@tiptap/extension-text-style";
@@ -16,19 +16,13 @@ import {
 	FaSolidTrash,
 } from "svelte-icons-pack/fa";
 import "../lib/editorapp/styles.css";
-import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import { HeadProps } from "$lib/editorapp/header";
 import { FaSolidX } from "svelte-icons-pack/fa";
 import { toggleMode } from "mode-watcher";
-
-type Note = {
-	id?: number;
-	created_at?: Date;
-	title: string;
-	note: string;
-	folder: string;
-};
+import { type Note } from "$lib/types";
+import Globalattr from "$lib/editorapp/globalattr";
+import CustomTaskList from "$lib/editorapp/customtasklist";
 
 let note = $state<Note>({
 	id: 0,
@@ -39,94 +33,31 @@ let note = $state<Note>({
 
 let projects = $state<string[]>([]);
 let project = $state<string>();
-let editorEditable = $state<boolean>(note.id && note.id > 0 ? true : false);
-
-function formatDate(rawDate: Date) {
-	const date = new Date(rawDate);
-	const formattedDate = new Intl.DateTimeFormat("de-DE", {
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-		hour: "numeric",
-		minute: "numeric",
-		second: "numeric",
-	}).format(date);
-	return formattedDate;
-}
-
-const CustomTaskList = TaskList.extend({
-	addKeyboardShortcuts() {
-		return {
-			"Mod-shift-t": () => this.editor.commands.toggleTaskList(),
-			Enter: () => {
-				const { state, view } = this.editor;
-				const { tr, doc } = state;
-				const currentPos = state.selection.$from.pos;
-
-				// Find the node at the cursor position
-				doc.nodesBetween(currentPos, currentPos, (node, pos) => {
-					if (node.type.name !== "text") {
-						// Ensure it's not a text node
-						tr.setNodeMarkup(pos, null, {
-							...node.attrs,
-							timeStamp: formatDate(new Date()), // Set the timeStamp
-						});
-					}
-				});
-
-				// Dispatch the transaction
-				view.dispatch(tr);
-				return false;
-			},
-		};
-	},
-});
+let editorEditable = $state<boolean>();
 
 let notes = $state<Note[]>([]);
 let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
 
-onDestroy(async () => {
-	await addNote();
+onMount(async () => {
+	// Create the editor
+	if (!editor) setEditor();
+
+	// Save on Ctrl+S
+	window.addEventListener("keypress", (key) => {
+		if (key.ctrlKey && key.code === "KeyS") {
+			addNote();
+		}
+	});
+
+	await invoke("createdb", {});
+	getnotes();
 });
 
-const GlobalAttr = Extension.create({
-	name: "globalAttr",
-	addGlobalAttributes() {
-		return [
-			{
-				types: [
-					"paragraph",
-					"taskList",
-					"taskItem",
-					"HeadProps",
-					"blockquote",
-					"bulletList",
-					"codeBlock",
-					"doc",
-					"hardBreak",
-					"heading",
-					"horizontalRule",
-					"listItem",
-					"orderedList",
-				],
-				attributes: {
-					timeStamp: {
-						default: "", // Default value
-						parseHTML: (element) => element.getAttribute("timeStamp"),
-						renderHTML: (attributes) => {
-							if (!attributes.timeStamp) {
-								return {};
-							}
-							return {
-								timeStamp: attributes.timeStamp,
-							};
-						},
-					},
-				},
-			},
-		];
-	},
+onDestroy(async () => {
+	if (note.id != 0) {
+		await addNote();
+	}
 });
 
 function setEditor() {
@@ -135,7 +66,7 @@ function setEditor() {
 		editable: false,
 		element: element,
 		extensions: [
-			GlobalAttr,
+			Globalattr,
 			CustomTaskList,
 			TaskItem,
 			HeadProps,
@@ -159,35 +90,20 @@ function setEditor() {
 		},
 	});
 }
+
+// Save after 2 seconds of not typing
 const debouncedSave = debounce(async () => {
 	try {
 		await addNote();
 	} catch (error) {
 		console.error("Auto-save failed:", error);
 	}
-}, 2000); // 2 seconds after user stops typing
-
-onMount(async () => {
-	if (!editor) {
-		setEditor();
-	}
-	await invoke("createdb", {});
-	getnotes();
-});
+}, 2000);
 
 async function getnotes() {
 	if (notes.length <= 0) notes = await invoke("getnote", { project });
 	notes = await invoke("getnote", { project });
 	await getprojects();
-}
-
-async function createNote() {
-	try {
-		await invoke("createnote", { note });
-		notes = await invoke("getnote", {});
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
 }
 
 async function getprojects() {
@@ -198,8 +114,16 @@ async function getprojects() {
 	}
 }
 
+async function createNote() {
+	try {
+		await invoke("createnote", {});
+		notes = await invoke("getnote", {});
+	} catch (error) {
+		console.error("Invoke error:", error);
+	}
+}
+
 async function addNote() {
-	console.log(note.note);
 	try {
 		note.note = editor?.getHTML() ?? "";
 		await invoke("addnote", { note });
@@ -220,6 +144,7 @@ async function deleteNote(id: number) {
 }
 
 function loadnote(value: Note) {
+	editorEditable = note.id && note.id > 0 ? true : false;
 	note = value;
 	if (note.id && note.id > 0) {
 		editor?.setEditable(true);
