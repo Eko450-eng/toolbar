@@ -1,4 +1,3 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use regex::Regex;
 use std::env;
 use std::path::PathBuf;
@@ -26,15 +25,19 @@ async fn create_schema(url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
 
 fn get_sqlite_url() -> PathBuf {
     if let Some(app_data_dir) = dirs_next::data_dir() {
-        println!("Application data directory: {}", app_data_dir.display());
         let mut path = app_data_dir;
         path.push("toolbar/notes.db");
+        println!("Application data directory: {}", path.clone(););
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     } else {
         println!("Could not determine the application data directory.");
         let mut path = PathBuf::from("/");
         path.push("toolbar/notes.db");
+        println!(
+            "Could not determine the application data directory. {}",
+            path.clone()
+        );
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     }
