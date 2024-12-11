@@ -8,15 +8,15 @@
     </clipPath>
     <linearGradient id="gradient_4" gradientUnits="userSpaceOnUse" x1="262.5" y1="0" x2="262.5" y2="525">
       <stop offset="0" stop-color="#4500AC" />
-      <stop offset="1" stop-color="#250F46" />
+      <stop offset="1" stop-color="#421881" />
     </linearGradient>
     <linearGradient id="gradient_5" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="525" y2="525">
-      <stop offset="0" stop-color="#250F46" />
+      <stop offset="0" stop-color="#421881" />
       <stop offset="1" stop-color="#4500AC" />
     </linearGradient>
     <linearGradient id="gradient_6" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="248" y2="379">
       <stop offset="0" stop-color="#4500AC" />
-      <stop offset="1" stop-color="#250F46" />
+      <stop offset="1" stop-color="#421881" />
     </linearGradient>
     <g id="group_7">
       <path id="Rectangle" d="M395 0C466.807 0 525 58.1932 525 130L525 395C525 466.807 466.807 525 395 525L130 525C58.1932 525 0 466.807 0 395L0 130C3.05176e-05 58.1932 58.1932 0 130 0L395 0Z" style="fill:url(#gradient_4);mix-blend-mode:normal;" transform="matrix(0.707 0.707 -0.707 0.707 363 0)" />
