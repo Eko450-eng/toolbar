@@ -27,17 +27,12 @@ fn get_sqlite_url() -> PathBuf {
     if let Some(app_data_dir) = dirs_next::data_dir() {
         let mut path = app_data_dir;
         path.push("toolbar/notes.db");
-        println!("Application data directory: {}", path.clone(););
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     } else {
         println!("Could not determine the application data directory.");
         let mut path = PathBuf::from("/");
         path.push("toolbar/notes.db");
-        println!(
-            "Could not determine the application data directory. {}",
-            path.clone()
-        );
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     }
