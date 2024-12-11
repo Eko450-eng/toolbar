@@ -29,13 +29,13 @@
       ],
       "nsis": {
         "oneClick": false,
-        "perMachine": false, // Ensures installation is per-user
-        "allowElevation": false, // Prevents the installer from requesting admin privileges
+        "perMachine": false, 
+        "allowElevation": false,
         "installerIcon": null,
         "license": null,
         "warningsAsErrors": false,
         "include": null,
-        "installMode": "user" // Install in the user's directory
+        "installMode": "user"
       },
 		"icon": [
 			"icons/32x32.png",
