@@ -1,7 +1,7 @@
 <script lang="ts">
 import { invoke } from "@tauri-apps/api/core";
-import { onMount } from "svelte";
-import { Editor } from "@tiptap/core";
+import { onDestroy, onMount } from "svelte";
+import { Editor, Extension } from "@tiptap/core";
 import Color from "@tiptap/extension-color";
 import StarterKit from "@tiptap/starter-kit";
 import TextStyle from "@tiptap/extension-text-style";
@@ -27,23 +27,57 @@ type Note = {
 	created_at?: Date;
 	title: string;
 	note: string;
-	project: string;
+	folder: string;
 };
 
 let note = $state<Note>({
 	id: 0,
 	note: "",
-	project: "",
+	folder: "",
 	title: "",
 });
 
 let projects = $state<string[]>([]);
 let project = $state<string>();
+let editorEditable = $state<boolean>(note.id && note.id > 0 ? true : false);
+
+function formatDate(rawDate: Date) {
+	const date = new Date(rawDate);
+	const formattedDate = new Intl.DateTimeFormat("de-DE", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+		hour: "numeric",
+		minute: "numeric",
+		second: "numeric",
+	}).format(date);
+	return formattedDate;
+}
 
 const CustomTaskList = TaskList.extend({
 	addKeyboardShortcuts() {
 		return {
 			"Mod-shift-t": () => this.editor.commands.toggleTaskList(),
+			Enter: () => {
+				const { state, view } = this.editor;
+				const { tr, doc } = state;
+				const currentPos = state.selection.$from.pos;
+
+				// Find the node at the cursor position
+				doc.nodesBetween(currentPos, currentPos, (node, pos) => {
+					if (node.type.name !== "text") {
+						// Ensure it's not a text node
+						tr.setNodeMarkup(pos, null, {
+							...node.attrs,
+							timeStamp: formatDate(new Date()), // Set the timeStamp
+						});
+					}
+				});
+
+				// Dispatch the transaction
+				view.dispatch(tr);
+				return false;
+			},
 		};
 	},
 });
@@ -52,11 +86,56 @@ let notes = $state<Note[]>([]);
 let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
 
+onDestroy(async () => {
+	await addNote();
+});
+
+const GlobalAttr = Extension.create({
+	name: "globalAttr",
+	addGlobalAttributes() {
+		return [
+			{
+				types: [
+					"paragraph",
+					"taskList",
+					"taskItem",
+					"HeadProps",
+					"blockquote",
+					"bulletList",
+					"codeBlock",
+					"doc",
+					"hardBreak",
+					"heading",
+					"horizontalRule",
+					"listItem",
+					"orderedList",
+				],
+				attributes: {
+					timeStamp: {
+						default: "", // Default value
+						parseHTML: (element) => element.getAttribute("timeStamp"),
+						renderHTML: (attributes) => {
+							if (!attributes.timeStamp) {
+								return {};
+							}
+							return {
+								timeStamp: attributes.timeStamp,
+							};
+						},
+					},
+				},
+			},
+		];
+	},
+});
+
 function setEditor() {
 	editor = null;
 	editor = new Editor({
+		editable: false,
 		element: element,
 		extensions: [
+			GlobalAttr,
 			CustomTaskList,
 			TaskItem,
 			HeadProps,
@@ -120,6 +199,7 @@ async function getprojects() {
 }
 
 async function addNote() {
+	console.log(note.note);
 	try {
 		note.note = editor?.getHTML() ?? "";
 		await invoke("addnote", { note });
@@ -141,6 +221,9 @@ async function deleteNote(id: number) {
 
 function loadnote(value: Note) {
 	note = value;
+	if (note.id && note.id > 0) {
+		editor?.setEditable(true);
+	}
 	editor?.commands.setContent(value.note);
 	editor?.commands.focus();
 }
@@ -183,17 +266,29 @@ function loadnote(value: Note) {
     {/if}
 
         <div class="container h-screen overflow-hidden w-100 flex flex-col gap-4 prose text-white h-screen overflow-auto">
-        <label class="label mb-2">
+            <label class="label mb-2">
             <span>Title</span>
-            <input
-              type="text"
-              id="title"
-              class="input px-2"
-              placeholder=""
-              bind:value={note.title}
-            />
+                <input
+                    readonly={editorEditable}
+                    type="text"
+                    id="title"
+                    class="input px-2"
+                    placeholder="Note"
+                    bind:value={note.title}
+                />
             </label>
             <div class="textarea h-4/5" bind:this={element}></div>
+            <label class="label mb-2">
+                <span>Project</span>
+                <input
+                    readonly={note.id && note.id > 0 ? true : false}
+                    type="text"
+                    id="folder"
+                    class="input px-2"
+                    placeholder="Note"
+                    bind:value={note.folder}
+                />
+            </label>
         </div>
 
     <nav class="list-nav">
