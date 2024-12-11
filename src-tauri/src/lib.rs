@@ -156,8 +156,6 @@ async fn deletenote(id: i64) -> Result<String, String> {
 
     instance.close().await;
 
-    println!("Inserted -> {:?}", result);
-
     Ok("Created".to_string())
 }
 
@@ -195,9 +193,6 @@ async fn addnote(note: Note) -> Result<String, String> {
 
     instance.close().await;
 
-    println!("Inserted -> {:?}", result);
-
-    // let s: String = result.try_into().expect("Could not return string");
     Ok("Created".to_string())
 }
 
