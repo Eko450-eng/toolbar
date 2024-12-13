@@ -93,6 +93,29 @@ async fn createnote() -> Result<i64, String> {
 }
 
 #[tauri::command]
+async fn searchtext(project: Option<&str>) -> Result<Vec<Note>, Vec<String>> {
+    let db_path = get_sqlite_url();
+    let url = format!("sqlite://{}", db_path.to_string_lossy());
+
+    let instance = SqlitePool::connect(&url).await.unwrap();
+
+    let query = if let Some(project_string) = project {
+        if !project_string.is_empty() {
+            format!("SELECT * FROM notes WHERE note LIKE '%{project_string}%'")
+        } else {
+            "SELECT * FROM notes".to_string()
+        }
+    } else {
+        "SELECT * FROM notes".to_string()
+    };
+
+    let notes: Vec<Note> = sqlx::query_as(&query).fetch_all(&instance).await.unwrap();
+    println!("{:?}", notes);
+
+    Ok(notes)
+}
+
+#[tauri::command]
 async fn getnote(project: Option<&str>) -> Result<Vec<Note>, Vec<String>> {
     let db_path = get_sqlite_url();
     let url = format!("sqlite://{}", db_path.to_string_lossy());
@@ -152,7 +175,7 @@ async fn deletenote(id: i64) -> Result<String, String> {
     let query = "DELETE FROM notes WHERE id = $1;";
 
     let instance = SqlitePool::connect(&url).await.unwrap();
-    let result = sqlx::query(&query).bind(&id).execute(&instance).await;
+    let _result = sqlx::query(&query).bind(&id).execute(&instance).await;
 
     instance.close().await;
 
@@ -183,7 +206,7 @@ async fn addnote(note: Note) -> Result<String, String> {
     }
 
     let instance = SqlitePool::connect(&url).await.unwrap();
-    let result = sqlx::query(&query)
+    let _result = sqlx::query(&query)
         .bind(&note.note.to_string())
         .bind(&note.folder.to_string())
         .bind(&note.title.to_string())
@@ -206,7 +229,8 @@ pub fn run() {
             getnote,
             deletenote,
             createnote,
-            getprojects
+            getprojects,
+            searchtext
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -23,6 +23,11 @@ import { toggleMode } from "mode-watcher";
 import { type Note } from "$lib/types";
 import Globalattr from "$lib/editorapp/globalattr";
 import CustomTaskList from "$lib/editorapp/customtasklist";
+import {
+	getModalStore,
+	Modal,
+	type ModalSettings,
+} from "@skeletonlabs/skeleton";
 
 let note = $state<Note>({
 	id: 0,
@@ -31,7 +36,7 @@ let note = $state<Note>({
 	title: "",
 });
 
-let projects = $state<string[]>([]);
+let projects = $state<Note[]>([]);
 let project = $state<string>();
 let editorEditable = $state<boolean>();
 
@@ -39,12 +44,44 @@ let notes = $state<Note[]>([]);
 let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
 
+async function searchtext(query: string) {
+	try {
+		projects = await invoke("searchtext", { query });
+	} catch (error) {
+		console.error("Invoke error:", error);
+	}
+}
+
+const modalStore = getModalStore();
+
+const modal: ModalSettings = {
+	type: "prompt",
+	// Data
+	// Populates the input value and attributes
+	value: "",
+	valueAttr: { type: "text", minlength: 3, maxlength: 10, required: false },
+	// Returns the updated response value
+	response: (r: string) => searchtext(r),
+};
+
 onMount(async () => {
 	// Create the editor
 	if (!editor) setEditor();
 
 	// Save on Ctrl+S
 	window.addEventListener("keypress", (key) => {
+		window.addEventListener("keypress", (key) => {
+			if (key.ctrlKey && key.code === "KeyF") {
+				modalStore.trigger(modal);
+			}
+		});
+		if (key.shiftKey && key.code === "Tab") {
+			console.log("none");
+			key.preventDefault();
+		}
+		if (key.ctrlKey && key.code === "KeyN") {
+			createNote();
+		}
 		if (key.ctrlKey && key.code === "KeyS") {
 			addNote();
 		}
@@ -103,7 +140,7 @@ const debouncedSave = debounce(async () => {
 async function getnotes() {
 	if (notes.length <= 0) notes = await invoke("getnote", { project });
 	notes = await invoke("getnote", { project });
-	await getprojects();
+	// await getprojects();
 }
 
 async function getprojects() {
@@ -128,7 +165,7 @@ async function addNote() {
 		note.note = editor?.getHTML() ?? "";
 		await invoke("addnote", { note });
 		notes = await invoke("getnote", {});
-		getprojects();
+		// getprojects();
 	} catch (error) {
 		console.error("Invoke error:", error);
 	}
@@ -228,13 +265,13 @@ function loadnote(value: Note) {
                 <li>
                     <div class="w-full flex justify-between items-center" >
                         <button class="btn truncate" onclick={() => {
-                            project = p;
+                            project = p.title;
                             getnotes();
                         }}>
                             <span class="badge bg-primary-500 ">
                                 <Icon src={FaSolidNoteSticky}/>
                             </span>
-                            <span class="flex-auto truncate">{p}</span>
+                            <span class="flex-auto truncate">{p.title}</span>
                         </button>
                     </div>
                 </li>
@@ -242,4 +279,5 @@ function loadnote(value: Note) {
         </ul>
     </nav>
 </div>
+<Modal />
 
