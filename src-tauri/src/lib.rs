@@ -196,6 +196,8 @@ async fn addnote(note: Note) -> Result<String, String> {
             VALUES($1, $2, $3)
     ";
 
+    println!("{:?}", note);
+
     if note.id != Some(0) {
         query = "
         UPDATE notes SET

@@ -8,19 +8,12 @@ import TextStyle from "@tiptap/extension-text-style";
 import ListItem from "@tiptap/extension-list-item";
 import { Icon } from "svelte-icons-pack";
 import { debounce } from "lodash-es";
-import {
-	FaSolidFloppyDisk,
-	FaSolidMoon,
-	FaSolidNoteSticky,
-	FaSolidPlus,
-	FaSolidTrash,
-} from "svelte-icons-pack/fa";
+import { FaSolidNoteSticky } from "svelte-icons-pack/fa";
 import "../lib/editorapp/styles.css";
 import TaskItem from "@tiptap/extension-task-item";
 import { HeadProps } from "$lib/editorapp/header";
 import { FaSolidX } from "svelte-icons-pack/fa";
-import { toggleMode } from "mode-watcher";
-import { type Note } from "$lib/types";
+import type { Note } from "$lib/types";
 import Globalattr from "$lib/editorapp/globalattr";
 import CustomTaskList from "$lib/editorapp/customtasklist";
 import {
@@ -28,6 +21,8 @@ import {
 	Modal,
 	type ModalSettings,
 } from "@skeletonlabs/skeleton";
+import Navbar from "./navbar.svelte";
+import { addNote, createNote } from "$lib/notes/functions";
 
 let note = $state<Note>({
 	id: 0,
@@ -40,15 +35,22 @@ let projects = $state<Note[]>([]);
 let project = $state<string>();
 let editorEditable = $state<boolean>();
 
-let notes = $state<Note[]>([]);
 let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
 
-async function searchtext(query: string) {
-	try {
-		projects = await invoke("searchtext", { query });
-	} catch (error) {
-		console.error("Invoke error:", error);
+async function runcommand(query: string) {
+	if (query.startsWith("/")) {
+		try {
+			//projects = await invoke("searchtext", { query });
+		} catch (error) {
+			console.error("Invoke error:", error);
+		}
+	} else if (query.startsWith(":")) {
+		if (query.substring(1).trim() === "save") {
+			if (editor) await addNote(note, editor);
+		}
+		// } else if (query.startsWith("")) {
+		// } else if (query.startsWith("")) {
 	}
 }
 
@@ -56,12 +58,9 @@ const modalStore = getModalStore();
 
 const modal: ModalSettings = {
 	type: "prompt",
-	// Data
-	// Populates the input value and attributes
 	value: "",
 	valueAttr: { type: "text", minlength: 3, maxlength: 10, required: false },
-	// Returns the updated response value
-	response: (r: string) => searchtext(r),
+	response: (r: string) => runcommand(r),
 };
 
 onMount(async () => {
@@ -69,31 +68,26 @@ onMount(async () => {
 	if (!editor) setEditor();
 
 	// Save on Ctrl+S
-	window.addEventListener("keypress", (key) => {
-		window.addEventListener("keypress", (key) => {
-			if (key.ctrlKey && key.code === "KeyF") {
-				modalStore.trigger(modal);
-			}
-		});
-		if (key.shiftKey && key.code === "Tab") {
-			console.log("none");
+	window.addEventListener("keypress", async (key) => {
+		if (key.ctrlKey && key.code === "KeyF") {
+			modalStore.trigger(modal);
+		} else if (key.shiftKey && key.code === "Tab") {
 			key.preventDefault();
 		}
 		if (key.ctrlKey && key.code === "KeyN") {
 			createNote();
 		}
 		if (key.ctrlKey && key.code === "KeyS") {
-			addNote();
+			if (editor) await addNote(note, editor);
 		}
 	});
 
 	await invoke("createdb", {});
-	getnotes();
 });
 
 onDestroy(async () => {
 	if (note.id != 0) {
-		await addNote();
+		if (editor) await addNote(note, editor);
 	}
 });
 
@@ -112,11 +106,10 @@ function setEditor() {
 		],
 		content: note.note,
 		onTransaction: () => {
-			// force re-render so `editor.isActive` works as expected
 			editor = editor;
 		},
 		onUpdate() {
-			if (note.id != 0) {
+			if (note.id !== 0) {
 				debouncedSave();
 			}
 		},
@@ -131,102 +124,15 @@ function setEditor() {
 // Save after 2 seconds of not typing
 const debouncedSave = debounce(async () => {
 	try {
-		await addNote();
+		if (editor) await addNote(note, editor);
 	} catch (error) {
 		console.error("Auto-save failed:", error);
 	}
 }, 2000);
-
-async function getnotes() {
-	if (notes.length <= 0) notes = await invoke("getnote", { project });
-	notes = await invoke("getnote", { project });
-	// await getprojects();
-}
-
-async function getprojects() {
-	try {
-		projects = await invoke("getprojects", { note });
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-async function createNote() {
-	try {
-		await invoke("createnote", {});
-		notes = await invoke("getnote", {});
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-async function addNote() {
-	try {
-		note.note = editor?.getHTML() ?? "";
-		await invoke("addnote", { note });
-		notes = await invoke("getnote", {});
-		// getprojects();
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-async function deleteNote(id: number) {
-	try {
-		await invoke("deletenote", { id });
-		notes = await invoke("getnote", {});
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-function loadnote(value: Note) {
-	editorEditable = note.id && note.id > 0 ? true : false;
-	note = value;
-	if (note.id && note.id > 0) {
-		editor?.setEditable(true);
-	}
-	editor?.commands.setContent(value.note);
-	editor?.commands.focus();
-}
 </script>
 
 <div class="flex h-screen overflow-auto">
-    {#if notes}
-        <nav class="flex flex-col list-nav justify-between  w-1/5 max-w-1/5 min-w-1/5">
-            <ul>
-                {#each notes as note}
-                    <li class="w-full flex justify-between items-center">
-                            <div class="w-full flex justify-between items-center" >
-                                <button class="btn truncate" onclick={()=>loadnote(note)}>
-                                    <span class="badge bg-primary-500 ">
-                                        <Icon src={FaSolidNoteSticky}/>
-                                    </span>
-                                    <span class="flex-auto truncate">{note.title}</span>
-                                </button>
-                                <button class="btn-icon-s bg-red-500" onclick={()=>deleteNote(note.id ?? 0)}>
-                                    <Icon src={FaSolidTrash}/>
-                                </button>
-                            </div>
-                    </li>
-                {/each}
-            </ul>
-            <div class="flex flex-col">
-                <div class="flex justify-evenly mb-10">
-                    <button type="button" class="btn-icon variant-filled" onclick={createNote}>
-                        <Icon src={FaSolidPlus} />
-                    </button>
-                    <button type="button" class="btn-icon variant-filled" onclick={addNote}>
-                        <Icon src={FaSolidFloppyDisk} />
-                    </button>
-                    <button type="button" class="btn-icon variant-filled" onclick={toggleMode}>
-                        <Icon src={FaSolidMoon} />
-                    </button>
-                </div>
-            </div>
-        </nav>
-    {/if}
-
+    <Navbar bind:note bind:editor />
         <div class="container h-screen overflow-hidden w-100 flex flex-col gap-4 prose text-white h-screen overflow-auto">
             <label class="label mb-2">
             <span>Title</span>
@@ -257,7 +163,6 @@ function loadnote(value: Note) {
         <ul>
             <button class="btn w-full truncate self-end bg-red-500" onclick={() => { 
                 project = ""; 
-                getnotes(); 
             }}>
                 <Icon src={FaSolidX}/>
             </button>
@@ -266,7 +171,6 @@ function loadnote(value: Note) {
                     <div class="w-full flex justify-between items-center" >
                         <button class="btn truncate" onclick={() => {
                             project = p.title;
-                            getnotes();
                         }}>
                             <span class="badge bg-primary-500 ">
                                 <Icon src={FaSolidNoteSticky}/>

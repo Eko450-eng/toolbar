@@ -14,7 +14,6 @@ const CustomTaskList = TaskList.extend({
 
 				doc.nodesBetween(currentPos, currentPos, (node, pos) => {
 					if (node.type.name !== "text" && node.content.size > 0) {
-						console.log(node.content);
 						if (node.content.size > 0) {
 							tr.setNodeMarkup(pos, null, {
 								...node.attrs,
