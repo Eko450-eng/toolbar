@@ -1,223 +1,207 @@
-use regex::Regex;
-use std::env;
+use std::error::Error;
 use std::path::PathBuf;
 
+mod parsetood;
+
 use dirs_next;
+use parsetood::get_all_notes_with_tasks;
+use parsetood::Note;
+use parsetood::NoteWithTasks;
 use serde::Deserialize;
 use serde::Serialize;
-use sqlx::{migrate::MigrateDatabase, sqlite::SqliteQueryResult, FromRow, Sqlite, SqlitePool};
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
-struct Note {
-    id: Option<i64>,
-    created_at: Option<String>,
+fn create_empty_note(db: &sled::Db, folder: String) -> Result<i64, Box<dyn Error>> {
+    // Get the next available ID
+    let next_id = db.len() as i64;
+
+    let note = Note {
+        id: next_id,
+        created_at: Some(chrono::Utc::now().to_rfc3339()),
+        title: String::new(),
+        note: String::new(),
+        folder,
+    };
+
+    // Insert the empty note
+    db.insert(next_id.to_be_bytes(), bincode::serialize(&note)?)?;
+
+    Ok(next_id)
+}
+
+// Function to edit a note
+fn update_note(
+    db: &sled::Db,
+    id: i64,
     title: String,
-    note: String,
+    content: String,
     folder: String,
+) -> Result<(), Box<dyn Error>> {
+    // Get the existing note
+    if let Some(existing_note_bytes) = db.get(id.to_be_bytes())? {
+        let mut note: Note = bincode::deserialize(&existing_note_bytes)?;
+
+        // Update the fields
+        note.title = title;
+        note.note = content;
+        note.folder = folder;
+
+        // Save the updated note
+        db.insert(id.to_be_bytes(), bincode::serialize(&note)?)?;
+
+        Ok(())
+    } else {
+        Err("Note not found".into())
+    }
 }
 
-async fn create_schema(url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
-    let pool = SqlitePool::connect(&url).await?;
-    let qry = "
-        PRAGMA foreign_keys = ON ; 
-        CREATE TABLE IF NOT EXISTS notes (
-        id          INTEGER     PRIMARY KEY AUTOINCREMENT,
-        title       TEXT        NOT NULL,
-        note        TEXT,
-        created_at   DATETIME    DEFAULT     CURRENT_TIMESTAMP,
-        folder     TEXT
-        );";
-    let result = sqlx::query(qry).execute(&pool).await;
-    pool.close().await;
-    return result;
+// Function to read all notes
+fn read_all_notes(db: &sled::Db) -> Result<Vec<Note>, Box<dyn Error>> {
+    let notes: Result<Vec<Note>, Box<dyn Error>> = db
+        .iter()
+        .map(|result| {
+            let (_, value_bytes) = result?;
+            let note: Note = bincode::deserialize(&value_bytes)?;
+            Ok(note)
+        })
+        .collect();
+
+    notes
 }
 
-fn get_sqlite_url() -> PathBuf {
+// New function to search notes by title
+fn search_notes_by_title(db: &sled::Db, search_term: &str) -> Result<Vec<Note>, Box<dyn Error>> {
+    let matching_notes: Vec<Note> = db
+        .iter()
+        .filter_map(|result| {
+            result.ok().and_then(|(_, value_bytes)| {
+                let note: Note = bincode::deserialize(&value_bytes).ok()?;
+                // Case-insensitive search
+                if note
+                    .title
+                    .to_lowercase()
+                    .contains(&search_term.to_lowercase())
+                {
+                    Some(note)
+                } else {
+                    None
+                }
+            })
+        })
+        .collect();
+
+    Ok(matching_notes)
+}
+
+fn getopentasks(db: &sled::Db) -> Result<Vec<NoteWithTasks>, Box<dyn std::error::Error>> {
+    let notes_with_tasks = get_all_notes_with_tasks(&db)?;
+
+    // Print the results
+    for note in &notes_with_tasks {
+        println!("\nNote: {} - '{}'", note.note_id, note.title);
+        for (index, task) in note.tasks.iter().enumerate() {
+            println!(
+                "  Task {}: [{}] {}",
+                index + 1,
+                if task.checked { "x" } else { " " },
+                task.label
+            );
+        }
+    }
+
+    Ok(notes_with_tasks)
+}
+
+#[tauri::command]
+async fn gettask() -> Result<Vec<NoteWithTasks>, Vec<String>> {
+    let url = get_sled_url();
+    let db = sled::open(&url).expect("Cant find file in 35");
+
+    let tasks = getopentasks(&db);
+
+    db.flush();
+
+    Ok(tasks.expect("No tasks"))
+}
+
+// New function to delete a note
+fn delete_note(db: &sled::Db, id: i64) -> Result<(), Box<dyn Error>> {
+    if db.remove(id.to_be_bytes())?.is_some() {
+        Ok(())
+    } else {
+        Err("Note not found".into())
+    }
+}
+
+fn get_sled_url() -> PathBuf {
     if let Some(app_data_dir) = dirs_next::data_dir() {
         let mut path = app_data_dir;
-        path.push("toolbar/notes.db");
+        path.push("toolbar/notes");
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     } else {
         println!("Could not determine the application data directory.");
         let mut path = PathBuf::from("/");
-        path.push("toolbar/notes.db");
+        path.push("toolbar/notes");
         std::fs::create_dir_all(path.parent().unwrap()).expect("Failed to create config directory");
         path
     }
 }
 
 #[tauri::command]
-async fn createdb() {
-    let db_path = get_sqlite_url();
-    let url = format!("sqlite://{}", db_path.to_string_lossy());
+async fn getnote() -> Result<Vec<Note>, Vec<String>> {
+    let url = get_sled_url();
+    let db = sled::open(&url).expect("Cant find file in 35");
 
-    if !Sqlite::database_exists(&url).await.unwrap_or(false) {
-        Sqlite::create_database(&url).await.unwrap();
-        match create_schema(&url).await {
-            Ok(_) => println!("Created"),
-            Err(e) => println!("{:?}", e),
-        }
-    }
+    let notes = read_all_notes(&db);
+
+    println!("GetNote: ---- {:?}", notes);
+
+    db.flush();
+    Ok(notes.expect("Empty"))
 }
 
 #[tauri::command]
-async fn createnote() -> Result<i64, String> {
-    let db_path = get_sqlite_url();
-    let url = format!("sqlite://{}", db_path.to_string_lossy());
+async fn searchnotebytitle(query: &str) -> Result<Vec<Note>, Vec<String>> {
+    let url = get_sled_url();
+    let db = sled::open(&url).expect("Cant find file in 35");
 
-    let _instance = SqlitePool::connect(&url).await.unwrap();
+    let notes = search_notes_by_title(&db, query);
 
-    let query = "
-        INSERT INTO notes (
-            note,
-            folder,
-            title
-        ) 
-            VALUES($1, $2, $3)
-    ";
+    println!("GetNote: ---- {:?}", notes);
 
-    let now = chrono::Local::now().format("%Y-%m-%d_%H:%M:%S");
-
-    let instance = SqlitePool::connect(&url).await.unwrap();
-    let result = sqlx::query(&query)
-        .bind("".to_string())
-        .bind("".to_string())
-        .bind(now.to_string())
-        .execute(&instance)
-        .await
-        .map_err(|e| e.to_string())?
-        .last_insert_rowid();
-
-    Ok(result)
+    db.flush();
+    Ok(notes.expect("Empty"))
 }
 
 #[tauri::command]
-async fn searchtext(project: Option<&str>) -> Result<Vec<Note>, Vec<String>> {
-    let db_path = get_sqlite_url();
-    let url = format!("sqlite://{}", db_path.to_string_lossy());
+async fn createnote() -> Result<String, String> {
+    let url = get_sled_url();
+    let db = sled::open(&url).expect("Cant find file in 56");
+    create_empty_note(&db, "none".to_string());
 
-    let instance = SqlitePool::connect(&url).await.unwrap();
-
-    let query = if let Some(project_string) = project {
-        if !project_string.is_empty() {
-            format!("SELECT * FROM notes WHERE note LIKE '%{project_string}%'")
-        } else {
-            "SELECT * FROM notes".to_string()
-        }
-    } else {
-        "SELECT * FROM notes".to_string()
-    };
-
-    let notes: Vec<Note> = sqlx::query_as(&query).fetch_all(&instance).await.unwrap();
-    println!("{:?}", notes);
-
-    Ok(notes)
-}
-
-#[tauri::command]
-async fn getnote(project: Option<&str>) -> Result<Vec<Note>, Vec<String>> {
-    let db_path = get_sqlite_url();
-    let url = format!("sqlite://{}", db_path.to_string_lossy());
-
-    let instance = SqlitePool::connect(&url).await.unwrap();
-
-    let query = if let Some(project_string) = project {
-        if !project_string.is_empty() {
-            format!("SELECT * FROM notes WHERE note LIKE '%project: {project_string}<%'")
-        } else {
-            "SELECT * FROM notes".to_string()
-        }
-    } else {
-        "SELECT * FROM notes".to_string()
-    };
-
-    let notes: Vec<Note> = sqlx::query_as(&query).fetch_all(&instance).await.unwrap();
-
-    Ok(notes)
-}
-
-fn subtractheader(input: &str) -> Option<String> {
-    let re = Regex::new(
-        r#".prop..tag data-type="property" class="..............">project: (?<project>\w*)"#,
-    )
-    .unwrap();
-    re.captures(input)
-        .and_then(|cap| cap.name("project").map(|m| m.as_str().to_string()))
-}
-
-#[tauri::command]
-async fn getprojects() -> Result<Vec<String>, Vec<String>> {
-    let db_path = get_sqlite_url();
-    let url = format!("sqlite://{}", db_path.to_string_lossy());
-
-    let instance = SqlitePool::connect(&url).await.unwrap();
-
-    let notes: Vec<Note> = sqlx::query_as("SELECT * FROM notes")
-        .fetch_all(&instance)
-        .await
-        .unwrap();
-
-    let mut projects: Vec<String> = vec![];
-
-    for note in notes {
-        projects.push(subtractheader(&note.note).expect("Couldn't get project"));
-    }
-
-    Ok(projects)
-}
-
-#[tauri::command]
-async fn deletenote(id: i64) -> Result<String, String> {
-    let db_path = get_sqlite_url();
-    let url = format!("sqlite://{}", db_path.to_string_lossy());
-
-    let query = "DELETE FROM notes WHERE id = $1;";
-
-    let instance = SqlitePool::connect(&url).await.unwrap();
-    let _result = sqlx::query(&query).bind(&id).execute(&instance).await;
-
-    instance.close().await;
-
+    db.flush();
     Ok("Created".to_string())
 }
 
 #[tauri::command]
 async fn addnote(note: Note) -> Result<String, String> {
-    let db_path = get_sqlite_url();
-    let url = format!("sqlite://{}", db_path.to_string_lossy());
+    let url = get_sled_url();
 
-    let mut query = "
-        INSERT INTO notes (
-            note,
-            folder,
-            title
-        ) 
-            VALUES($1, $2, $3)
-    ";
+    let db = sled::open(&url).expect("Cant find file in 56");
+    update_note(&db, note.id, note.title, note.note, note.folder);
 
-    println!("{:?}", note);
+    db.flush();
+    Ok("Created".to_string())
+}
 
-    if note.id != Some(0) {
-        query = "
-        UPDATE notes SET
-            note = $1,
-            folder = $2,
-            title = $3
-            WHERE id = $4;";
-    }
+#[tauri::command]
+async fn deletenote(id: i64) -> Result<String, String> {
+    let url = get_sled_url();
+    let db = sled::open(&url).expect("Cant find file in 56");
 
-    let instance = SqlitePool::connect(&url).await.unwrap();
-    let _result = sqlx::query(&query)
-        .bind(&note.note.to_string())
-        .bind(&note.folder.to_string())
-        .bind(&note.title.to_string())
-        .bind(&note.id)
-        .execute(&instance)
-        .await;
+    delete_note(&db, id);
 
-    instance.close().await;
-
+    db.flush();
     Ok("Created".to_string())
 }
 
@@ -226,13 +210,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            createdb,
-            addnote,
             getnote,
-            deletenote,
+            addnote,
             createnote,
-            getprojects,
-            searchtext
+            deletenote,
+            searchnotebytitle,
+            gettask
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

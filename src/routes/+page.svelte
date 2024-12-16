@@ -1,5 +1,4 @@
 <script lang="ts">
-import { invoke } from "@tauri-apps/api/core";
 import { onDestroy, onMount } from "svelte";
 import { Editor } from "@tiptap/core";
 import Color from "@tiptap/extension-color";
@@ -8,22 +7,25 @@ import TextStyle from "@tiptap/extension-text-style";
 import ListItem from "@tiptap/extension-list-item";
 import { Icon } from "svelte-icons-pack";
 import { debounce } from "lodash-es";
-import { FaSolidNoteSticky } from "svelte-icons-pack/fa";
+import { FaSolidCheck } from "svelte-icons-pack/fa";
 import "../lib/editorapp/styles.css";
-import TaskItem from "@tiptap/extension-task-item";
 import { HeadProps } from "$lib/editorapp/header";
 import { FaSolidX } from "svelte-icons-pack/fa";
-import type { Note } from "$lib/types";
+import type { Note, NoteWithTasks } from "$lib/types";
 import Globalattr from "$lib/editorapp/globalattr";
 import CustomTaskList from "$lib/editorapp/customtasklist";
+import CustomTaskItem from "$lib/editorapp/customtaskitem";
 import {
 	getModalStore,
 	Modal,
 	type ModalSettings,
 } from "@skeletonlabs/skeleton";
 import Navbar from "./navbar.svelte";
-import { addNote, createNote } from "$lib/notes/functions";
+import { addNote, createNote, getnotes } from "$lib/notes/functions";
+import { invoke } from "@tauri-apps/api/core";
 
+let notes = $state<Note[]>([]);
+let tasks = $state<NoteWithTasks[]>([]);
 let note = $state<Note>({
 	id: 0,
 	note: "",
@@ -31,8 +33,6 @@ let note = $state<Note>({
 	title: "",
 });
 
-let projects = $state<Note[]>([]);
-let project = $state<string>();
 let editorEditable = $state<boolean>();
 
 let element: Element | undefined = $state(undefined);
@@ -63,7 +63,13 @@ const modal: ModalSettings = {
 	response: (r: string) => runcommand(r),
 };
 
+async function gettask() {
+	tasks = await invoke("gettask");
+}
+
 onMount(async () => {
+	notes = await getnotes(notes, "");
+	gettask();
 	// Create the editor
 	if (!editor) setEditor();
 
@@ -75,14 +81,13 @@ onMount(async () => {
 			key.preventDefault();
 		}
 		if (key.ctrlKey && key.code === "KeyN") {
-			createNote();
+			notes = await createNote();
 		}
 		if (key.ctrlKey && key.code === "KeyS") {
+			gettask();
 			if (editor) await addNote(note, editor);
 		}
 	});
-
-	await invoke("createdb", {});
 });
 
 onDestroy(async () => {
@@ -99,7 +104,7 @@ function setEditor() {
 		extensions: [
 			Globalattr,
 			CustomTaskList,
-			TaskItem,
+			CustomTaskItem,
 			HeadProps,
 			Color.configure({ types: [TextStyle.name, ListItem.name] }),
 			StarterKit,
@@ -132,7 +137,7 @@ const debouncedSave = debounce(async () => {
 </script>
 
 <div class="flex h-screen overflow-auto">
-    <Navbar bind:note bind:editor />
+    <Navbar bind:notes bind:note bind:editor />
         <div class="container h-screen overflow-hidden w-100 flex flex-col gap-4 prose text-white h-screen overflow-auto">
             <label class="label mb-2">
             <span>Title</span>
@@ -161,24 +166,24 @@ const debouncedSave = debounce(async () => {
 
     <nav class="list-nav">
         <ul>
-            <button class="btn w-full truncate self-end bg-red-500" onclick={() => { 
-                project = ""; 
-            }}>
+            <button class="btn w-full truncate self-end bg-red-500" onclick={gettask}>
                 <Icon src={FaSolidX}/>
             </button>
-            {#each projects as p}
-                <li>
-                    <div class="w-full flex justify-between items-center" >
-                        <button class="btn truncate" onclick={() => {
-                            project = p.title;
-                        }}>
-                            <span class="badge bg-primary-500 ">
-                                <Icon src={FaSolidNoteSticky}/>
+            {#each tasks as note}
+                {#each note.tasks as p}
+                    <li>
+                        <div class="w-full flex justify-between items-center" >
+                            <span class="flex gap-2 truncate">
+                                {#if p.checked}
+                                    <Icon src={FaSolidCheck} color="green"/>
+                                    {:else}
+                                    <Icon src={FaSolidX} color="red"/>
+                                {/if}
+                                {p.label}
                             </span>
-                            <span class="flex-auto truncate">{p.title}</span>
-                        </button>
-                    </div>
-                </li>
+                        </div>
+                    </li>
+                {/each}
             {/each}
         </ul>
     </nav>

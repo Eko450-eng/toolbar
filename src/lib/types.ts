@@ -5,3 +5,14 @@ export type Note = {
 	note: string;
 	folder: string;
 };
+
+export type NoteWithTasks = {
+	note_id: number;
+	title: string;
+	tasks: TaskItem[];
+};
+
+export type TaskItem = {
+	checked: boolean;
+	label: string;
+};

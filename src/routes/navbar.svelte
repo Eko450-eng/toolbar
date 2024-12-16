@@ -9,33 +9,24 @@ import {
 	FaSolidPlus,
 	FaSolidTrash,
 } from "svelte-icons-pack/fa";
-import {
-	addNote,
-	createNote,
-	deleteNote,
-	getnotes,
-} from "$lib/notes/functions";
+import { addNote, createNote, deleteNote } from "$lib/notes/functions";
 import { toggleMode } from "mode-watcher";
-import { onMount } from "svelte";
 
-let notes = $state<Note[]>([]);
 let {
 	note = $bindable(),
+	notes = $bindable(),
 	editor = $bindable(),
-}: { note: Note; editor: Editor | null } = $props();
+}: { note: Note; notes: Note[]; editor: Editor | null } = $props();
 
 function loadnote(value: Note) {
 	note = value;
-	if (note.id && note.id > 0) {
-		editor?.setEditable(true);
-	}
+	note.title = value.title;
+	// if (note.id && note.id >= 0) {
+	editor?.setEditable(true);
+	// }
 	editor?.commands.setContent(value.note);
 	editor?.commands.focus();
 }
-
-onMount(async () => {
-	notes = await getnotes(notes, "");
-});
 </script>
 
 {#if notes}
@@ -50,7 +41,7 @@ onMount(async () => {
                                 </span>
                                 <span class="flex-auto truncate">{note.title}</span>
                             </button>
-                            <button class="btn-icon-s bg-red-500" onclick={()=>deleteNote(note.id ?? 0)}>
+                            <button class="btn-icon-s bg-red-500" onclick={async()=>notes = await deleteNote(note.id ?? 0)}>
                                 <Icon src={FaSolidTrash}/>
                             </button>
                         </div>
@@ -59,10 +50,10 @@ onMount(async () => {
         </ul>
         <div class="flex flex-col">
             <div class="flex justify-evenly mb-10">
-                <button type="button" class="btn-icon variant-filled" onclick={createNote}>
+                <button type="button" class="btn-icon variant-filled" onclick={async () => notes = await createNote()}>
                     <Icon src={FaSolidPlus} />
                 </button>
-                <button type="button" class="btn-icon variant-filled" onclick={addNote}>
+                <button type="button" class="btn-icon variant-filled" onclick={async()=>notes = await addNote(note, editor!)}>
                     <Icon src={FaSolidFloppyDisk} />
                 </button>
                 <button type="button" class="btn-icon variant-filled" onclick={toggleMode}>
