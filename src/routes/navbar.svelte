@@ -24,6 +24,7 @@ function loadnote(value: Note) {
 	// if (note.id && note.id >= 0) {
 	editor?.setEditable(true);
 	// }
+	editor?.commands.setContent("");
 	editor?.commands.setContent(value.note);
 	editor?.commands.focus();
 }
@@ -36,12 +37,12 @@ function loadnote(value: Note) {
                 <li class="w-full flex justify-between items-center">
                         <div class="w-full flex justify-between items-center" >
                             <button class="btn truncate" onclick={()=>loadnote(note)}>
-                                <span class="badge bg-primary-500 ">
+                                <span class="badge variant-filled-surface">
                                     <Icon src={FaSolidNoteSticky}/>
                                 </span>
                                 <span class="flex-auto truncate">{note.title}</span>
                             </button>
-                            <button class="btn-icon-s bg-red-500" onclick={async()=>notes = await deleteNote(note.id ?? 0)}>
+                            <button class="btn-icon-s variant-filled-error" onclick={async()=>notes = await deleteNote(note.id ?? 0)}>
                                 <Icon src={FaSolidTrash}/>
                             </button>
                         </div>

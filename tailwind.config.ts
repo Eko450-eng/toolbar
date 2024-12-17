@@ -107,7 +107,21 @@ const config: Config = {
 	plugins: [
 		require("@tailwindcss/typography"),
 		skeleton({
-			themes: { preset: ["wintry"] },
+			themes: {
+				preset: [
+					"skeleton",
+					"modern",
+					"wintry",
+					"gold-nouveau",
+					"modern",
+					"rocket",
+					"seafoam",
+					"sahara",
+					"crimson",
+					"vintage",
+					"hamlindigo",
+				],
+			},
 		}),
 	],
 };
