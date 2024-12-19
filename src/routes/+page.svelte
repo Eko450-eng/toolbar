@@ -14,7 +14,6 @@ import { FaSolidX } from "svelte-icons-pack/fa";
 import type { Note, NoteWithTasks } from "$lib/types";
 import Globalattr from "$lib/editorapp/globalattr";
 import CustomTaskList from "$lib/editorapp/customtasklist";
-import CustomTaskItem from "$lib/editorapp/customtaskitem";
 import {
 	getModalStore,
 	Modal,
@@ -25,7 +24,6 @@ import { addNote, createNote, getnotes } from "$lib/notes/functions";
 import { invoke } from "@tauri-apps/api/core";
 import TaskItem from "@tiptap/extension-task-item";
 
-TaskItem;
 const initNote: Note = {
 	id: -10,
 	note: "",
@@ -129,7 +127,7 @@ function setEditor() {
 		extensions: [
 			Globalattr,
 			CustomTaskList,
-			CustomTaskItem,
+			TaskItem,
 			HeadProps,
 			Color.configure({ types: [TextStyle.name, ListItem.name] }),
 			StarterKit,
@@ -158,7 +156,7 @@ const debouncedSave = debounce(async () => {
 	} catch (error) {
 		console.error("Auto-save failed:", error);
 	}
-}, 2000);
+}, 200);
 </script>
 
 <div class="flex h-screen overflow-auto" >

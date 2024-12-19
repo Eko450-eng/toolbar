@@ -18,7 +18,12 @@ let {
 	editor = $bindable(),
 }: { note: Note; notes: Note[]; editor: Editor | null } = $props();
 
+async function save(note: Note, editor: Editor | null) {
+	if (editor) await addNote(note, editor);
+}
+
 function loadnote(value: Note) {
+	save(note, editor);
 	note = value;
 	note.title = value.title;
 	// if (note.id && note.id >= 0) {
