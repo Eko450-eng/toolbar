@@ -23,6 +23,18 @@ import { toggleMode } from "mode-watcher";
 import { type Note } from "$lib/types";
 import Globalattr from "$lib/editorapp/globalattr";
 import CustomTaskList from "$lib/editorapp/customtasklist";
+import {
+	getModalStore,
+	getToastStore,
+	Modal,
+	Toast,
+	type ModalSettings,
+	type ToastStore,
+} from "@skeletonlabs/skeleton";
+import Navbar from "./navbar.svelte";
+import { addNote, createNote, getnotes } from "$lib/notes/functions";
+import { invoke } from "@tauri-apps/api/core";
+import TaskItem from "@tiptap/extension-task-item";
 
 let note = $state<Note>({
 	id: 0,
@@ -38,6 +50,62 @@ let editorEditable = $state<boolean>();
 let notes = $state<Note[]>([]);
 let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
+
+const modalStore = getModalStore();
+const toastStore = getToastStore();
+
+const t = {
+	message: "Saved",
+};
+
+const modal: ModalSettings = {
+	type: "prompt",
+	value: "",
+	valueAttr: { type: "text", minlength: 3, maxlength: 10, required: false },
+	response: (r: string) => runcommand(r),
+};
+
+async function setNote(id: number) {
+	let n = notes.find((note) => note.id === id) ?? initNote;
+	loadnote(n);
+}
+
+async function save(note: Note, editor: Editor | null, noToast?: boolean) {
+	if (editor) await addNote(note, editor);
+	if (!noToast) toastStore.trigger(t);
+	await gettask();
+}
+
+function loadnote(value: Note) {
+	note = value;
+	note.title = value.title;
+	// if (note.id && note.id >= 0) {
+	editor?.setEditable(true);
+	// }
+	editor?.commands.setContent("");
+	editor?.commands.setContent(value.note);
+	editor?.commands.focus();
+}
+
+async function runcommand(query: string) {
+	if (query.startsWith("/")) {
+		try {
+			//projects = await invoke("searchtext", { query });
+		} catch (error) {
+			console.error("Invoke error:", error);
+		}
+	} else if (query.startsWith(":")) {
+		if (query.substring(1).trim() === "save") {
+			await save(note, editor);
+		}
+		// } else if (query.startsWith("")) {
+		// } else if (query.startsWith("")) {
+	}
+}
+
+async function gettask() {
+	tasks = await invoke("gettask");
+}
 
 onMount(async () => {
 	// Create the editor
@@ -91,10 +159,9 @@ function setEditor() {
 	});
 }
 
-// Save after 2 seconds of not typing
 const debouncedSave = debounce(async () => {
 	try {
-		await addNote();
+		await save(note, editor, true);
 	} catch (error) {
 		console.error("Auto-save failed:", error);
 	}
@@ -154,69 +221,37 @@ function loadnote(value: Note) {
 }
 </script>
 
-<div class="flex h-screen overflow-auto">
-    {#if notes}
-        <nav class="flex flex-col list-nav justify-between  w-1/5 max-w-1/5 min-w-1/5">
-            <ul>
-                {#each notes as note}
-                    <li class="w-full flex justify-between items-center">
-                            <div class="w-full flex justify-between items-center" >
-                                <button class="btn truncate" onclick={()=>loadnote(note)}>
-                                    <span class="badge bg-primary-500 ">
-                                        <Icon src={FaSolidNoteSticky}/>
-                                    </span>
-                                    <span class="flex-auto truncate">{note.title}</span>
-                                </button>
-                                <button class="btn-icon-s bg-red-500" onclick={()=>deleteNote(note.id ?? 0)}>
-                                    <Icon src={FaSolidTrash}/>
-                                </button>
-                            </div>
-                    </li>
-                {/each}
-            </ul>
-            <div class="flex flex-col">
-                <div class="flex justify-evenly mb-10">
-                    <button type="button" class="btn-icon variant-filled" onclick={createNote}>
-                        <Icon src={FaSolidPlus} />
-                    </button>
-                    <button type="button" class="btn-icon variant-filled" onclick={addNote}>
-                        <Icon src={FaSolidFloppyDisk} />
-                    </button>
-                    <button type="button" class="btn-icon variant-filled" onclick={toggleMode}>
-                        <Icon src={FaSolidMoon} />
-                    </button>
-                </div>
-            </div>
-        </nav>
-    {/if}
+<div class="flex h-dvh" >
+    <Navbar bind:notes bind:note bind:editor />
+    <div
+        class="container w-100 flex flex-col gap-4 prose prose-invert text-white overflow-auto"
+    >
+        <label class="label">
+        <span>Title</span>
+            <input
+                readonly={editorEditable}
+                type="text"
+                id="title"
+                class="input px-2"
+                placeholder="Note"
+                bind:value={note.title}
+            />
+        </label>
+        <div class="textarea h-4/5" bind:this={element}></div>
+        <label class="label">
+            <span>Project</span>
+            <input
+                readonly={note.id && note.id > 0 ? true : false}
+                type="text"
+                id="folder"
+                class="input px-2"
+                placeholder="Note"
+                bind:value={note.folder}
+            />
+        </label>
+    </div>
 
-        <div class="container h-screen overflow-hidden w-100 flex flex-col gap-4 prose text-white h-screen overflow-auto">
-            <label class="label mb-2">
-            <span>Title</span>
-                <input
-                    readonly={editorEditable}
-                    type="text"
-                    id="title"
-                    class="input px-2"
-                    placeholder="Note"
-                    bind:value={note.title}
-                />
-            </label>
-            <div class="textarea h-4/5" bind:this={element}></div>
-            <label class="label mb-2">
-                <span>Project</span>
-                <input
-                    readonly={note.id && note.id > 0 ? true : false}
-                    type="text"
-                    id="folder"
-                    class="input px-2"
-                    placeholder="Note"
-                    bind:value={note.folder}
-                />
-            </label>
-        </div>
-
-    <nav class="list-nav">
+    <nav class="list-nav" >
         <ul>
             <button class="btn w-full truncate self-end bg-red-500" onclick={() => { 
                 project = ""; 
@@ -242,4 +277,5 @@ function loadnote(value: Note) {
         </ul>
     </nav>
 </div>
-
+<Modal />
+<Toast position="br" />
