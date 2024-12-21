@@ -1,5 +1,4 @@
 <script lang="ts">
-import { invoke } from "@tauri-apps/api/core";
 import { onDestroy, onMount } from "svelte";
 import { Editor } from "@tiptap/core";
 import Color from "@tiptap/extension-color";
@@ -8,19 +7,11 @@ import TextStyle from "@tiptap/extension-text-style";
 import ListItem from "@tiptap/extension-list-item";
 import { Icon } from "svelte-icons-pack";
 import { debounce } from "lodash-es";
-import {
-	FaSolidFloppyDisk,
-	FaSolidMoon,
-	FaSolidNoteSticky,
-	FaSolidPlus,
-	FaSolidTrash,
-} from "svelte-icons-pack/fa";
+import { FaSolidCheck, FaSolidRepeat } from "svelte-icons-pack/fa";
 import "../lib/editorapp/styles.css";
-import TaskItem from "@tiptap/extension-task-item";
 import { HeadProps } from "$lib/editorapp/header";
 import { FaSolidX } from "svelte-icons-pack/fa";
-import { toggleMode } from "mode-watcher";
-import { type Note } from "$lib/types";
+import type { Note, NoteWithTasks } from "$lib/types";
 import Globalattr from "$lib/editorapp/globalattr";
 import CustomTaskList from "$lib/editorapp/customtasklist";
 import {
@@ -36,18 +27,19 @@ import { addNote, createNote, getnotes } from "$lib/notes/functions";
 import { invoke } from "@tauri-apps/api/core";
 import TaskItem from "@tiptap/extension-task-item";
 
-let note = $state<Note>({
-	id: 0,
+const initNote: Note = {
+	id: -10,
 	note: "",
 	folder: "",
 	title: "",
-});
-
-let projects = $state<string[]>([]);
-let project = $state<string>();
-let editorEditable = $state<boolean>();
+};
 
 let notes = $state<Note[]>([]);
+let tasks = $state<NoteWithTasks[]>([]);
+let note = $state<Note>(initNote);
+
+let editorEditable = $state<boolean>();
+
 let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
 
@@ -111,20 +103,77 @@ onMount(async () => {
 	// Create the editor
 	if (!editor) setEditor();
 
+async function save(note: Note, editor: Editor | null) {
+	if (editor) await addNote(note, editor);
+	await gettask();
+}
+
+function loadnote(value: Note) {
+	note = value;
+	note.title = value.title;
+	// if (note.id && note.id >= 0) {
+	editor?.setEditable(true);
+	// }
+	editor?.commands.setContent("");
+	editor?.commands.setContent(value.note);
+	editor?.commands.focus();
+}
+
+async function runcommand(query: string) {
+	if (query.startsWith("/")) {
+		try {
+			//projects = await invoke("searchtext", { query });
+		} catch (error) {
+			console.error("Invoke error:", error);
+		}
+	} else if (query.startsWith(":")) {
+		if (query.substring(1).trim() === "save") {
+			await save(note, editor);
+		}
+		// } else if (query.startsWith("")) {
+		// } else if (query.startsWith("")) {
+	}
+}
+
+const modalStore = getModalStore();
+
+const modal: ModalSettings = {
+	type: "prompt",
+	value: "",
+	valueAttr: { type: "text", minlength: 3, maxlength: 10, required: false },
+	response: (r: string) => runcommand(r),
+};
+
+async function gettask() {
+	tasks = await invoke("gettask");
+}
+
+onMount(async () => {
+	if (!editor && notes.length == 0) {
+		notes = await getnotes(notes, "");
+		gettask();
+		// Create the editor
+		if (!editor) setEditor();
+	}
 	// Save on Ctrl+S
-	window.addEventListener("keypress", (key) => {
+	window.addEventListener("keypress", async (key) => {
+		if (key.ctrlKey && key.code === "KeyF") {
+			modalStore.trigger(modal);
+		} else if (key.shiftKey && key.code === "Tab") {
+			key.preventDefault();
+		}
+		if (key.ctrlKey && key.code === "KeyN") {
+			notes = await createNote();
+		}
 		if (key.ctrlKey && key.code === "KeyS") {
-			addNote();
+			await save(note, editor);
 		}
 	});
-
-	await invoke("createdb", {});
-	getnotes();
 });
 
 onDestroy(async () => {
 	if (note.id != 0) {
-		await addNote();
+		await save(note, editor);
 	}
 });
 
@@ -143,11 +192,10 @@ function setEditor() {
 		],
 		content: note.note,
 		onTransaction: () => {
-			// force re-render so `editor.isActive` works as expected
 			editor = editor;
 		},
 		onUpdate() {
-			if (note.id != 0) {
+			if (note.id !== 0) {
 				debouncedSave();
 			}
 		},
@@ -165,60 +213,7 @@ const debouncedSave = debounce(async () => {
 	} catch (error) {
 		console.error("Auto-save failed:", error);
 	}
-}, 2000);
-
-async function getnotes() {
-	if (notes.length <= 0) notes = await invoke("getnote", { project });
-	notes = await invoke("getnote", { project });
-	await getprojects();
-}
-
-async function getprojects() {
-	try {
-		projects = await invoke("getprojects", { note });
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-async function createNote() {
-	try {
-		await invoke("createnote", {});
-		notes = await invoke("getnote", {});
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-async function addNote() {
-	try {
-		note.note = editor?.getHTML() ?? "";
-		await invoke("addnote", { note });
-		notes = await invoke("getnote", {});
-		getprojects();
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-async function deleteNote(id: number) {
-	try {
-		await invoke("deletenote", { id });
-		notes = await invoke("getnote", {});
-	} catch (error) {
-		console.error("Invoke error:", error);
-	}
-}
-
-function loadnote(value: Note) {
-	editorEditable = note.id && note.id > 0 ? true : false;
-	note = value;
-	if (note.id && note.id > 0) {
-		editor?.setEditable(true);
-	}
-	editor?.commands.setContent(value.note);
-	editor?.commands.focus();
-}
+}, 200);
 </script>
 
 <div class="flex h-dvh" >
@@ -253,26 +248,27 @@ function loadnote(value: Note) {
 
     <nav class="list-nav" >
         <ul>
-            <button class="btn w-full truncate self-end bg-red-500" onclick={() => { 
-                project = ""; 
-                getnotes(); 
-            }}>
-                <Icon src={FaSolidX}/>
+            <button class="btn w-full truncate self-end" onclick={gettask}>
+                <Icon src={FaSolidRepeat}/>
             </button>
-            {#each projects as p}
-                <li>
-                    <div class="w-full flex justify-between items-center" >
-                        <button class="btn truncate" onclick={() => {
-                            project = p;
-                            getnotes();
-                        }}>
-                            <span class="badge bg-primary-500 ">
-                                <Icon src={FaSolidNoteSticky}/>
-                            </span>
-                            <span class="flex-auto truncate">{p}</span>
+            {#each tasks as note}
+                <p>{note.title}</p> 
+                {#each note.tasks as p}
+                    <li>
+                        <button class={`btn variant-filled-secondary w-full truncate self-end text-black ${p.checked ? "border-green-200" : "border-red-500"}`} onclick={()=>setNote(note.note_id)}>
+                            <div class="w-full flex justify-between items-center" >
+                                <span class="flex gap-2 truncate">
+                                    {#if p.checked}
+                                        <Icon src={FaSolidCheck} color="green"/>
+                                        {:else}
+                                        <Icon src={FaSolidX} color="red"/>
+                                    {/if}
+                                    {p.label}
+                                </span>
+                            </div>
                         </button>
-                    </div>
-                </li>
+                    </li>
+                {/each}
             {/each}
         </ul>
     </nav>

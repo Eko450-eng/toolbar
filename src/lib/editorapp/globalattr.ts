@@ -7,22 +7,18 @@ const GlobalAttr = Extension.create({
 			{
 				types: [
 					"paragraph",
-					"taskList",
 					"taskItem",
 					"HeadProps",
 					"blockquote",
-					"bulletList",
 					"codeBlock",
 					"doc",
 					"hardBreak",
 					"heading",
 					"horizontalRule",
-					"listItem",
-					"orderedList",
 				],
 				attributes: {
 					timeStamp: {
-						default: null, // Default value
+						default: null,
 						parseHTML: (element) => element.getAttribute("timeStamp"),
 						renderHTML: (attributes) => {
 							if (!attributes.timeStamp) {

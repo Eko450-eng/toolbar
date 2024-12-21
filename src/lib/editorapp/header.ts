@@ -8,20 +8,6 @@ export const HeadProps = Node.create({
 	content: "inline*",
 	defining: true,
 
-	addOptions() {
-		return {
-			ghostText: "This is ghost text", // Default ghost text
-		};
-	},
-
-	addAttributes() {
-		return {
-			ghostText: {
-				default: null, // Allows setting ghost text per node instance
-			},
-		};
-	},
-
 	parseHTML() {
 		return [
 			{

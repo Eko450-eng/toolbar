@@ -142,17 +142,16 @@
 }
 
 [timeStamp]:not(:has(br)):hover::after {
-    position: absolute;
-    opacity: 1;
-    top: 0;
-    right: 1rem;
-    font-weight: normal;
     content: attr(timeStamp); 
+    position: relative;
+    opacity: 1;
+    top: 1rem;
+    right: 0rem;
+    font-weight: normal;
     text-align: right;
     heigth: fit-content;
     font-size: .85rem;
     color: #aaa;
     font-style: italic;
-    margin-left: 8px;
 }
 
