@@ -1,10 +1,18 @@
+mod ai;
 mod parsetood;
 mod sledfunctions;
 
+use ai::getmessage;
 use parsetood::{get_all_notes_with_tasks, Note, NoteWithTasks};
 use sledfunctions::{
-    create_empty_note, delete_note, getdb, read_all_notes, search_notes_by_title, update_note, 
+    create_empty_note, delete_note, getdb, read_all_notes, search_notes_by_title, update_note,
 };
+
+#[tauri::command]
+async fn promptai(input: &str, note: &str, model: &str) -> Result<String, Vec<String>> {
+    let msg = getmessage(input, note, model);
+    Ok(msg.await.unwrap())
+}
 
 // Function to edit a note
 #[tauri::command]
@@ -19,9 +27,7 @@ async fn gettask() -> Result<Vec<NoteWithTasks>, Vec<String>> {
 #[tauri::command]
 async fn getnote() -> Result<Vec<Note>, Vec<String>> {
     let db = getdb();
-
     let notes = read_all_notes(&db);
-
     let _ = db.flush();
     Ok(notes.expect("Empty"))
 }
@@ -29,9 +35,7 @@ async fn getnote() -> Result<Vec<Note>, Vec<String>> {
 #[tauri::command]
 async fn searchnotebytitle(query: &str) -> Result<Vec<Note>, Vec<String>> {
     let db = getdb();
-
     let notes = search_notes_by_title(&db, query);
-
     let _ = db.flush();
     Ok(notes.expect("Empty"))
 }
@@ -40,7 +44,6 @@ async fn searchnotebytitle(query: &str) -> Result<Vec<Note>, Vec<String>> {
 async fn createnote() -> Result<String, String> {
     let db = getdb();
     let _ = create_empty_note(&db, "none".to_string());
-
     let _ = db.flush();
     Ok("Created".to_string())
 }
@@ -49,7 +52,6 @@ async fn createnote() -> Result<String, String> {
 async fn addnote(note: Note) -> Result<String, String> {
     let db = getdb();
     let _ = update_note(&db, note.id, note.title, note.note, note.folder);
-
     let _ = db.flush();
     Ok("Created".to_string())
 }
@@ -58,7 +60,6 @@ async fn addnote(note: Note) -> Result<String, String> {
 async fn deletenote(id: i64) -> Result<String, String> {
     let db = getdb();
     let _ = delete_note(&db, id);
-
     let _ = db.flush();
     Ok("Created".to_string())
 }
@@ -73,7 +74,8 @@ pub fn run() {
             createnote,
             deletenote,
             searchnotebytitle,
-            gettask
+            gettask,
+            promptai
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

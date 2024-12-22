@@ -27,7 +27,7 @@ fn get_sled_url() -> std::path::PathBuf {
 
 pub fn getdb() -> sled::Db {
     let url = get_sled_url();
-    sled::open(&url).expect("Cant find file in 35")
+    sled::open(&url).expect("Cant open file")
 }
 
 pub fn create_empty_note(db: &sled::Db, folder: String) -> Result<i64, Box<dyn Error>> {

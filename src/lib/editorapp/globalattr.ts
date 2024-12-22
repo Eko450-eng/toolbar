@@ -12,9 +12,7 @@ const GlobalAttr = Extension.create({
 					"blockquote",
 					"codeBlock",
 					"doc",
-					"hardBreak",
 					"heading",
-					"horizontalRule",
 				],
 				attributes: {
 					timeStamp: {

@@ -6,7 +6,7 @@ import StarterKit from "@tiptap/starter-kit";
 import TextStyle from "@tiptap/extension-text-style";
 import ListItem from "@tiptap/extension-list-item";
 import { Icon } from "svelte-icons-pack";
-import { debounce } from "lodash-es";
+import { debounce, functions } from "lodash-es";
 import { FaSolidCheck, FaSolidRepeat } from "svelte-icons-pack/fa";
 import "../lib/editorapp/styles.css";
 import { HeadProps } from "$lib/editorapp/header";
@@ -20,7 +20,6 @@ import {
 	Modal,
 	Toast,
 	type ModalSettings,
-	type ToastStore,
 } from "@skeletonlabs/skeleton";
 import Navbar from "./navbar.svelte";
 import { addNote, createNote, getnotes } from "$lib/notes/functions";
@@ -37,6 +36,29 @@ const initNote: Note = {
 let notes = $state<Note[]>([]);
 let tasks = $state<NoteWithTasks[]>([]);
 let note = $state<Note>(initNote);
+let prompt = $state<string>("");
+let response = $state<string>("");
+
+let models = [
+	"gpt-4o-mini",
+	"neural-chat:latest",
+	"llama3.3",
+	"claude-3-haiku-20240307",
+];
+
+let model = $state("");
+
+const cBase =
+	"bg-surface-100-800-token w-screen h-screen p-4 flex justify-center items-center";
+
+async function promptai() {
+	response = await invoke("promptai", {
+		input: prompt,
+		note: note.note,
+		model: model ?? models[0],
+	});
+	editor?.commands.setContent(note.note + "<br/>" + response);
+}
 
 let editorEditable = $state<boolean>();
 
@@ -46,9 +68,7 @@ let editor: Editor | null = $state(null);
 const modalStore = getModalStore();
 const toastStore = getToastStore();
 
-const t = {
-	message: "Saved",
-};
+const savedMessage = { message: "Saved" };
 
 const modal: ModalSettings = {
 	type: "prompt",
@@ -64,7 +84,7 @@ async function setNote(id: number) {
 
 async function save(note: Note, editor: Editor | null, noToast?: boolean) {
 	if (editor) await addNote(note, editor);
-	if (!noToast) toastStore.trigger(t);
+	if (!noToast) toastStore.trigger(savedMessage);
 	await gettask();
 }
 
@@ -94,55 +114,6 @@ async function runcommand(query: string) {
 		// } else if (query.startsWith("")) {
 	}
 }
-
-async function gettask() {
-	tasks = await invoke("gettask");
-}
-
-onMount(async () => {
-	// Create the editor
-	if (!editor) setEditor();
-
-async function save(note: Note, editor: Editor | null) {
-	if (editor) await addNote(note, editor);
-	await gettask();
-}
-
-function loadnote(value: Note) {
-	note = value;
-	note.title = value.title;
-	// if (note.id && note.id >= 0) {
-	editor?.setEditable(true);
-	// }
-	editor?.commands.setContent("");
-	editor?.commands.setContent(value.note);
-	editor?.commands.focus();
-}
-
-async function runcommand(query: string) {
-	if (query.startsWith("/")) {
-		try {
-			//projects = await invoke("searchtext", { query });
-		} catch (error) {
-			console.error("Invoke error:", error);
-		}
-	} else if (query.startsWith(":")) {
-		if (query.substring(1).trim() === "save") {
-			await save(note, editor);
-		}
-		// } else if (query.startsWith("")) {
-		// } else if (query.startsWith("")) {
-	}
-}
-
-const modalStore = getModalStore();
-
-const modal: ModalSettings = {
-	type: "prompt",
-	value: "",
-	valueAttr: { type: "text", minlength: 3, maxlength: 10, required: false },
-	response: (r: string) => runcommand(r),
-};
 
 async function gettask() {
 	tasks = await invoke("gettask");
@@ -216,6 +187,16 @@ const debouncedSave = debounce(async () => {
 }, 200);
 </script>
 
+<!-- {#if response.length > 1} -->
+<!-- 	<div class="absolute z-10 modal-example-fullscreen {cBase}"> -->
+<!-- 		<div class="flex flex-col items-center space-y-4"> -->
+<!-- 			<h2 class="h2">Full Screen Modal</h2> -->
+<!--             {@html response} -->
+<!--             <button class="btn variant-filled" onclick={()=>response = ""}>× Close</button> -->
+<!-- 		</div> -->
+<!-- 	</div> -->
+<!-- {/if} -->
+
 <div class="flex h-dvh" >
     <Navbar bind:notes bind:note bind:editor />
     <div
@@ -233,18 +214,33 @@ const debouncedSave = debounce(async () => {
             />
         </label>
         <div class="textarea h-4/5" bind:this={element}></div>
-        <label class="label">
-            <span>Project</span>
-            <input
-                readonly={note.id && note.id > 0 ? true : false}
-                type="text"
-                id="folder"
-                class="input px-2"
-                placeholder="Note"
-                bind:value={note.folder}
-            />
-        </label>
+        <form onsubmit={promptai} class="flex">
+            <label class="label w-4/5">
+                <span>Frag die AI</span>
+                <!-- {#each models as modelname} -->
+                <!--     <span>{modelname}, </span> -->
+                <!-- {/each} -->
+                <input
+                    type="text"
+                    id="prompt"
+                    class="input px-2"
+                    placeholder="Fass mir das hier zusammen"
+                    bind:value={prompt}
+                />
+                <!-- <input -->
+                <!--     type="text" -->
+                <!--     id="model" -->
+                <!--     class="input px-2" -->
+                <!--     placeholder={models[0]} -->
+                <!--     bind:value={model} -->
+                <!-- /> -->
+            </label>
+            <button type="submit" class="btn truncate self-end">
+                Send
+            </button>
+        </form>
     </div>
+
 
     <nav class="list-nav" >
         <ul>
