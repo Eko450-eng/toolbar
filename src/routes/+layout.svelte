@@ -4,7 +4,6 @@ import { ModeWatcher } from "mode-watcher";
 import "../app.css";
 import { getToastStore, initializeStores, Toast } from "@skeletonlabs/skeleton";
 import { onMount } from "svelte";
-import { Client } from "@tauri-apps/plugin-stronghold";
 
 initializeStores();
 const toastStore = getToastStore();
