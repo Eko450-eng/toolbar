@@ -16,3 +16,10 @@ export type TaskItem = {
 	checked: boolean;
 	label: string;
 };
+
+export const initNote: Note = {
+	id: -10,
+	note: '',
+	folder: '',
+	title: '',
+};
