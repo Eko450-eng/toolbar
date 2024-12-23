@@ -1,86 +1,49 @@
 <script lang="ts">
-import { onDestroy, onMount } from "svelte";
-import { Editor } from "@tiptap/core";
-import Color from "@tiptap/extension-color";
-import StarterKit from "@tiptap/starter-kit";
-import TextStyle from "@tiptap/extension-text-style";
-import ListItem from "@tiptap/extension-list-item";
-import { Icon } from "svelte-icons-pack";
-import { debounce, functions } from "lodash-es";
-import { FaSolidCheck, FaSolidRepeat } from "svelte-icons-pack/fa";
-import "../lib/editorapp/styles.css";
-import { HeadProps } from "$lib/editorapp/header";
-import { FaSolidX } from "svelte-icons-pack/fa";
-import type { Note, NoteWithTasks } from "$lib/types";
-import Globalattr from "$lib/editorapp/globalattr";
-import CustomTaskList from "$lib/editorapp/customtasklist";
+import { onMount } from 'svelte';
+import { Editor } from '@tiptap/core';
+import Color from '@tiptap/extension-color';
+import StarterKit from '@tiptap/starter-kit';
+import TextStyle from '@tiptap/extension-text-style';
+import ListItem from '@tiptap/extension-list-item';
+import { debounce } from 'lodash-es';
+import '../lib/editorapp/styles.css';
+import { HeadProps } from '$lib/editorapp/header';
+import { initNote, type Note, type NoteWithTasks } from '$lib/types';
+import Globalattr from '$lib/editorapp/globalattr';
+import CustomTaskList from '$lib/editorapp/customtasklist';
 import {
 	getModalStore,
 	getToastStore,
 	Modal,
 	Toast,
 	type ModalSettings,
-} from "@skeletonlabs/skeleton";
-import Navbar from "./navbar.svelte";
-import { addNote, createNote, getnotes } from "$lib/notes/functions";
-import { invoke } from "@tauri-apps/api/core";
-import TaskItem from "@tiptap/extension-task-item";
-
-const initNote: Note = {
-	id: -10,
-	note: "",
-	folder: "",
-	title: "",
-};
+} from '@skeletonlabs/skeleton';
+import Navbar from './navbar.svelte';
+import { addNote, createNote, getnotes } from '$lib/notes/functions';
+import { invoke } from '@tauri-apps/api/core';
+import TaskItem from '@tiptap/extension-task-item';
+import EditorView from './editorView.svelte';
+import Searchbar from './searchbar.svelte';
 
 let notes = $state<Note[]>([]);
 let tasks = $state<NoteWithTasks[]>([]);
 let note = $state<Note>(initNote);
-let prompt = $state<string>("");
-let response = $state<string>("");
-
-let models = [
-	"gpt-4o-mini",
-	"neural-chat:latest",
-	"llama3.3",
-	"claude-3-haiku-20240307",
-];
-
-let model = $state("");
-
-const cBase =
-	"bg-surface-100-800-token w-screen h-screen p-4 flex justify-center items-center";
-
-async function promptai() {
-	response = await invoke("promptai", {
-		input: prompt,
-		note: note.note,
-		model: model ?? models[0],
-	});
-	editor?.commands.setContent(note.note + "<br/>" + response);
-}
 
 let editorEditable = $state<boolean>();
-
 let element: Element | undefined = $state(undefined);
 let editor: Editor | null = $state(null);
 
 const modalStore = getModalStore();
 const toastStore = getToastStore();
 
-const savedMessage = { message: "Saved" };
+const savedMessage = { message: 'Saved' };
 
 const modal: ModalSettings = {
-	type: "prompt",
-	value: "",
-	valueAttr: { type: "text", minlength: 3, maxlength: 10, required: false },
+	type: 'prompt',
+	value: '',
+	valueAttr: { type: 'text', minlength: 3, maxlength: 10, required: false },
 	response: (r: string) => runcommand(r),
 };
-
-async function setNote(id: number) {
-	let n = notes.find((note) => note.id === id) ?? initNote;
-	loadnote(n);
-}
 
 async function save(note: Note, editor: Editor | null, noToast?: boolean) {
 	if (editor) await addNote(note, editor);
@@ -88,65 +51,22 @@ async function save(note: Note, editor: Editor | null, noToast?: boolean) {
 	await gettask();
 }
 
-function loadnote(value: Note) {
-	note = value;
-	note.title = value.title;
-	// if (note.id && note.id >= 0) {
-	editor?.setEditable(true);
-	// }
-	editor?.commands.setContent("");
-	editor?.commands.setContent(value.note);
-	editor?.commands.focus();
-}
-
 async function runcommand(query: string) {
-	if (query.startsWith("/")) {
+	if (query.startsWith('/')) {
 		try {
-			//projects = await invoke("searchtext", { query });
 		} catch (error) {
-			console.error("Invoke error:", error);
+			console.error('Invoke error:', error);
 		}
-	} else if (query.startsWith(":")) {
-		if (query.substring(1).trim() === "save") {
+	} else if (query.startsWith(':')) {
+		if (query.substring(1).trim() === 'save') {
 			await save(note, editor);
 		}
-		// } else if (query.startsWith("")) {
-		// } else if (query.startsWith("")) {
 	}
 }
 
 async function gettask() {
-	tasks = await invoke("gettask");
+	tasks = await invoke('gettask');
 }
-
-onMount(async () => {
-	if (!editor && notes.length == 0) {
-		notes = await getnotes(notes, "");
-		gettask();
-		// Create the editor
-		if (!editor) setEditor();
-	}
-	// Save on Ctrl+S
-	window.addEventListener("keypress", async (key) => {
-		if (key.ctrlKey && key.code === "KeyF") {
-			modalStore.trigger(modal);
-		} else if (key.shiftKey && key.code === "Tab") {
-			key.preventDefault();
-		}
-		if (key.ctrlKey && key.code === "KeyN") {
-			notes = await createNote();
-		}
-		if (key.ctrlKey && key.code === "KeyS") {
-			await save(note, editor);
-		}
-	});
-});
-
-onDestroy(async () => {
-	if (note.id != 0) {
-		await save(note, editor);
-	}
-});
 
 function setEditor() {
 	editor = null;
@@ -162,17 +82,13 @@ function setEditor() {
 			StarterKit,
 		],
 		content: note.note,
-		onTransaction: () => {
-			editor = editor;
-		},
+		onTransaction: () => (editor = editor),
 		onUpdate() {
-			if (note.id !== 0) {
-				debouncedSave();
-			}
+			if (note.id !== 0) debouncedSave();
 		},
 		editorProps: {
 			attributes: {
-				class: "w-full",
+				class: 'w-full',
 			},
 		},
 	});
@@ -182,20 +98,32 @@ const debouncedSave = debounce(async () => {
 	try {
 		await save(note, editor, true);
 	} catch (error) {
-		console.error("Auto-save failed:", error);
+		console.error('Auto-save failed:', error);
 	}
 }, 200);
-</script>
 
-<!-- {#if response.length > 1} -->
-<!-- 	<div class="absolute z-10 modal-example-fullscreen {cBase}"> -->
-<!-- 		<div class="flex flex-col items-center space-y-4"> -->
-<!-- 			<h2 class="h2">Full Screen Modal</h2> -->
-<!--             {@html response} -->
-<!--             <button class="btn variant-filled" onclick={()=>response = ""}>× Close</button> -->
-<!-- 		</div> -->
-<!-- 	</div> -->
-<!-- {/if} -->
+onMount(async () => {
+	if (!editor && notes.length == 0) {
+		notes = await getnotes(notes, '');
+		gettask();
+		if (!editor) setEditor();
+	}
+	// Save on Ctrl+S
+	window.addEventListener('keypress', async (key) => {
+		if (key.ctrlKey && key.code === 'KeyF') {
+			modalStore.trigger(modal);
+		} else if (key.shiftKey && key.code === 'Tab') {
+			key.preventDefault();
+		}
+		if (key.ctrlKey && key.code === 'KeyN') {
+			notes = await createNote();
+		}
+		if (key.ctrlKey && key.code === 'KeyS') {
+			await save(note, editor);
+		}
+	});
+});
+</script>
 
 <div class="flex h-dvh" >
     <Navbar bind:notes bind:note bind:editor />
@@ -213,61 +141,11 @@ const debouncedSave = debounce(async () => {
                 bind:value={note.title}
             />
         </label>
-        <div class="textarea h-4/5" bind:this={element}></div>
-        <form onsubmit={promptai} class="flex">
-            <label class="label w-4/5">
-                <span>Frag die AI</span>
-                <!-- {#each models as modelname} -->
-                <!--     <span>{modelname}, </span> -->
-                <!-- {/each} -->
-                <input
-                    type="text"
-                    id="prompt"
-                    class="input px-2"
-                    placeholder="Fass mir das hier zusammen"
-                    bind:value={prompt}
-                />
-                <!-- <input -->
-                <!--     type="text" -->
-                <!--     id="model" -->
-                <!--     class="input px-2" -->
-                <!--     placeholder={models[0]} -->
-                <!--     bind:value={model} -->
-                <!-- /> -->
-            </label>
-            <button type="submit" class="btn truncate self-end">
-                Send
-            </button>
-        </form>
+        <EditorView bind:editor bind:element bind:note={note.note} />
     </div>
 
+    <Searchbar bind:editor bind:note bind:tasks bind:notes />
 
-    <nav class="list-nav" >
-        <ul>
-            <button class="btn w-full truncate self-end" onclick={gettask}>
-                <Icon src={FaSolidRepeat}/>
-            </button>
-            {#each tasks as note}
-                <p>{note.title}</p> 
-                {#each note.tasks as p}
-                    <li>
-                        <button class={`btn variant-filled-secondary w-full truncate self-end text-black ${p.checked ? "border-green-200" : "border-red-500"}`} onclick={()=>setNote(note.note_id)}>
-                            <div class="w-full flex justify-between items-center" >
-                                <span class="flex gap-2 truncate">
-                                    {#if p.checked}
-                                        <Icon src={FaSolidCheck} color="green"/>
-                                        {:else}
-                                        <Icon src={FaSolidX} color="red"/>
-                                    {/if}
-                                    {p.label}
-                                </span>
-                            </div>
-                        </button>
-                    </li>
-                {/each}
-            {/each}
-        </ul>
-    </nav>
 </div>
 <Modal />
 <Toast position="br" />
