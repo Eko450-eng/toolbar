@@ -1,159 +1,162 @@
 .tiptap p::before {
-  content: none !important;
+	content: none !important;
 }
 
 .ProseMirror p::before {
-  display: none !important;
+	display: none !important;
 }
 .prose p::before {
-  content: none;
-  display: none;
+	content: none;
+	display: none;
 }
 .ProseMirror {
-  overflow: auto;
-  padding: 0;
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  outline: none;
-  border: none;
+	overflow: auto;
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	outline: none;
+	border: none;
 }
 
 .tiptap {
-  [data-checked] {
-    display: flex;
-    gap: .5rem;
-  }
+	[data-checked] {
+		display: flex;
+		gap: .5rem;
+	}
 
-  input[type="checkbox"] {
-    outline: none;
-    border: none;
-    border-radius: 25px;
-    accent-color: teal;
-    cursor: pointer;
-  }
+	input[type="checkbox"] {
+		outline: none;
+		border: none;
+		border-radius: 25px;
+		accent-color: teal;
+		cursor: pointer;
+	}
 
-  /* Optional: Add styles when checked */
-  input[type="checkbox"]:checked {
-    border: 2px solid green;
-    background-color: lightgreen;
-  }
+	/* Optional: Add styles when checked */
+	input[type="checkbox"]:checked {
+		border: 2px solid green;
+		background-color: lightgreen;
+	}
 
-  :first-child {
-    margin-top: 0;
-  }
-  p {
-    margin: 0;
-    padding: 0;
-  }
+	:first-child {
+		margin-top: 0;
+	}
+	p {
+		margin: 0;
+		padding: 0;
+	}
 
-  /* List styles */
-  ul, 
-  ol {
-    padding: 0 1rem;
-    margin: 1.25rem 1rem 1.25rem 0.4rem;
-    
-    li p {
-      margin-bottom: 0.25em;
-    }
-  }
+	/* List styles */
+	ul,
+	ol {
+		padding: 0 1rem;
+		margin: 1.25rem 1rem 1.25rem 0.4rem;
 
-  /* Heading styles */
-  h1, 
-  h2, 
-  h3, 
-  h4, 
-  h5, 
-  h6 {
-    line-height: 1.1;
-    margin-top: 2.5rem;
-    text-wrap: pretty;
-  }
+		li p {
+			margin-bottom: 0.25em;
+		}
+	}
 
-  h1, 
-  h2 {
-    margin-top: 3.5rem;
-    margin-bottom: 1.5rem;
-  }
+	/* Heading styles */
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		line-height: 1.1;
+		margin-top: 2.5rem;
+		text-wrap: pretty;
+	}
 
-  h1 { 
-    font-size: 1.4rem; 
-  }
+	h1,
+	h2 {
+		margin-top: 3.5rem;
+		margin-bottom: 1.5rem;
+	}
 
-  h2 { 
-    font-size: 1.2rem; 
-  }
+	h1 {
+		font-size: 1.4rem;
+	}
 
-  h3 { 
-    font-size: 1.1rem; 
-  }
+	h2 {
+		font-size: 1.2rem;
+	}
 
-  h4, 
-  h5, 
-  h6 { 
-    font-size: 1rem; 
-  }
+	h3 {
+		font-size: 1.1rem;
+	}
 
-  /* Code and preformatted text styles */
-  code {
-    background-color: var(--purple-light);
-    border-radius: 0.4rem;
-    color: var(--white);
-    font-size: 0.85rem;
-    padding: 0.25em 0.3em;
-  }
+	h4,
+	h5,
+	h6 {
+		font-size: 1rem;
+	}
 
-  pre {
-    background: var(--black);
-    border-radius: 0.5rem;
-    color: var(--white);
-    font-family: 'JetBrainsMono', monospace;
-    margin: 1.5rem 0;
-    padding: 0.75rem 1rem;
+	/* Code and preformatted text styles */
+	code {
+		background-color: var(--purple-light);
+		border-radius: 0.4rem;
+		color: var(--white);
+		font-size: 0.85rem;
+		padding: 0.25em 0.3em;
+	}
 
-    code {
-      background: none;
-      color: inherit;
-      font-size: 0.8rem;
-      padding: 0;
-    }
-  }
+	pre {
+		background: var(--black);
+		border-radius: 0.5rem;
+		color: var(--white);
+		font-family: "JetBrainsMono", monospace;
+		margin: 1.5rem 0;
+		padding: 0.75rem 1rem;
 
-  blockquote {
-    border-left: 3px solid var(--gray-3);
-    margin: 1.5rem 0;
-    padding-left: 1rem;
-  }
+		code {
+			background: none;
+			color: inherit;
+			font-size: 0.8rem;
+			padding: 0;
+		}
+	}
 
-  hr {
-    border: none;
-    border-top: 1px solid var(--gray-2);
-    margin: 2rem 0;
-  }
+	blockquote {
+		border-left: 3px solid var(--gray-3);
+		margin: 1.5rem 0;
+		padding-left: 1rem;
+	}
+
+	hr {
+		border: none;
+		border-top: 1px solid var(--gray-2);
+		margin: 2rem 0;
+	}
 }
 
-
 [timeStamp]:not(:has(br)) {
-    position: relative;
+	position: relative;
 }
 
 [timeStamp]:not(:has(br))::after {
-    content: ''; 
-    opacity: 0; 
-    transition: opacity 0.5s ease-in-out;
+	pointer-events: none;
+	content: "";
+	opacity: 0;
+	transition: opacity 0.5s ease-in-out;
 }
 
 [timeStamp]:not(:has(br)):hover::after {
-    content: attr(timeStamp); 
-    position: relative;
-    opacity: 1;
-    top: 1rem;
-    right: 0rem;
-    font-weight: normal;
-    text-align: right;
-    heigth: fit-content;
-    font-size: .85rem;
-    color: #aaa;
-    font-style: italic;
+	pointer-events: none;
+	content: attr(timeStamp);
+	position: absolute;
+	opacity: 1;
+	top: 1rem;
+	font-weight: normal;
+	text-align: right;
+	heigth: fit-content;
+	font-size: .85rem;
+	color: #aaa;
+	font-style: italic;
 }
 
+*::after {
+	pointer-events: none;
+}

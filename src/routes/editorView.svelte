@@ -31,6 +31,7 @@ async function promptai() {
 		model: model ?? models[0],
 	});
 	editor?.commands.setContent(note + '<br/>' + response);
+	editor?.commands.scrollIntoView();
 }
 </script>
 

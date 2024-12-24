@@ -43,7 +43,7 @@ let taskFilter = $state<boolean>(false);
                 {#if (taskFilter && !p.checked) || !taskFilter }
                     <li>
                         <button class={`btn w-full truncate self-end ${p.checked ? "border-green-200" : "border-red-500"}`} onclick={()=>setNote(note.note_id)}>
-                            <div class="w-full flex gap-2 justify-between items-center" >
+                            <div class="w-full flex gap-2 items-center" >
                                 {#if p.checked}
                                     <Icon src={FaSolidCheck} size="16" color="green"/>
                                     {:else}

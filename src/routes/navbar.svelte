@@ -1,16 +1,9 @@
 <script lang="ts">
-import type { Note } from "$lib/types";
-import { Editor } from "@tiptap/core";
-import { Icon } from "svelte-icons-pack";
-import {
-	FaSolidFloppyDisk,
-	FaSolidMoon,
-	FaSolidNoteSticky,
-	FaSolidPlus,
-	FaSolidTrash,
-} from "svelte-icons-pack/fa";
-import { addNote, createNote, deleteNote } from "$lib/notes/functions";
-import { toggleMode } from "mode-watcher";
+import type { Note } from '$lib/types';
+import { Editor } from '@tiptap/core';
+import { Icon } from 'svelte-icons-pack';
+import { FaSolidNoteSticky, FaSolidTrash } from 'svelte-icons-pack/fa';
+import { addNote, deleteNote } from '$lib/notes/functions';
 
 let {
 	note = $bindable(),
@@ -29,7 +22,7 @@ function loadnote(value: Note) {
 	// if (note.id && note.id >= 0) {
 	editor?.setEditable(true);
 	// }
-	editor?.commands.setContent("");
+	editor?.commands.setContent('');
 	editor?.commands.setContent(value.note);
 	editor?.commands.focus();
 }
@@ -54,18 +47,5 @@ function loadnote(value: Note) {
                 </li>
             {/each}
         </ul>
-        <div class="flex flex-col">
-            <div class="flex justify-evenly mb-10">
-                <button type="button" class="btn-icon variant-filled" onclick={async () => notes = await createNote()}>
-                    <Icon src={FaSolidPlus} />
-                </button>
-                <button type="button" class="btn-icon variant-filled" onclick={async()=>notes = await addNote(note, editor!)}>
-                    <Icon src={FaSolidFloppyDisk} />
-                </button>
-                <button type="button" class="btn-icon variant-filled" onclick={toggleMode}>
-                    <Icon src={FaSolidMoon} />
-                </button>
-            </div>
-        </div>
     </nav>
 {/if}

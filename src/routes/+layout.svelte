@@ -6,6 +6,13 @@ import { initializeStores } from '@skeletonlabs/skeleton';
 import { onMount } from 'svelte';
 import { getThemeOptions } from './layout.svelte';
 import { setTheme, theme } from '$lib/stores/theme';
+import { toggleMode } from 'mode-watcher';
+import {
+	triggerDelete,
+	triggerEditor,
+	triggerNewNote,
+	triggerSave,
+} from '$lib/stores/triggers';
 
 initializeStores();
 let { children } = $props();
@@ -19,14 +26,23 @@ async function create(theme?: string) {
 			{
 				text: `Neu`,
 				enabled: true,
+				action() {
+					$triggerNewNote += 1;
+				},
 			},
 			{
 				text: `Speichern`,
 				enabled: true,
+				action() {
+					$triggerSave += 1;
+				},
 			},
 			{
 				text: `Löschen`,
 				enabled: true,
+				action() {
+					$triggerDelete += 1;
+				},
 			},
 			{
 				text: `In Cloud Speichern`,
@@ -40,19 +56,54 @@ async function create(theme?: string) {
 		items: [
 			{
 				text: `Headline`,
-				enabled: false,
+				enabled: true,
+				items: [
+					{
+						text: '1',
+						action() {
+							triggerEditor.set('headline1');
+						},
+					},
+					{
+						text: '2',
+						action() {
+							triggerEditor.set('headline2');
+						},
+					},
+					{
+						text: '3',
+						action() {
+							triggerEditor.set('headline3');
+						},
+					},
+					{
+						text: '4',
+						action() {
+							triggerEditor.set('headline4');
+						},
+					},
+				],
 			},
 			{
 				text: `Bold`,
-				enabled: false,
+				enabled: true,
+				action() {
+					triggerEditor.set('bold');
+				},
 			},
 			{
 				text: `Italic`,
-				enabled: false,
+				enabled: true,
+				action() {
+					triggerEditor.set('italic');
+				},
 			},
 			{
-				text: `Underline`,
-				enabled: false,
+				text: `strike`,
+				enabled: true,
+				action() {
+					triggerEditor.set('strike');
+				},
 			},
 		],
 	});
@@ -64,6 +115,13 @@ async function create(theme?: string) {
 				text: `Design ändern`,
 				enabled: true,
 				items: getThemeOptions(theme ?? 'skeleton'),
+			},
+			{
+				text: `Dark Mode - DIE APP IST FÜR DARKMODE Ausgelegt!!!!!`,
+				enabled: true,
+				action() {
+					toggleMode();
+				},
 			},
 			{
 				text: `AI Model`,
